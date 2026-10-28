@@ -850,7 +850,7 @@
           const d_top = Math.floor(top / 10);
 
           if (bottom < 10) {
-            // Multiplicación por 1 cifra (Fácil y Medio) desglosada dígito por dígito
+            // Multiplicación por 1 cifra (Fácil y Medio) desglosada dígito por dígito con actualización en vivo
             const prod1 = u_top * bottom;
             const u_res = prod1 % 10;
             const carry1 = Math.floor(prod1 / 10);
@@ -858,25 +858,27 @@
 
             const steps = [
               {
-                instruction: `Unidades: Multiplica ${u_top} × ${bottom}`,
+                stepType: 'mul_units',
+                instruction: `Multiplica las Unidades: ${u_top} × ${bottom}`,
                 desc: carry1 > 0
-                  ? `${u_top} × ${bottom} = ${prod1}. Escribe el resultado (${prod1}) o el dígito de las unidades (${u_res}) para colocarlo y subir el acarreo (+${carry1}).`
-                  : `Multiplica ${u_top} × ${bottom} y coloca el dígito en la columna de las unidades.`,
+                  ? `Calcula ${u_top} × ${bottom} = ${prod1}. Puedes escribir ${u_res} (el dígito que se queda abajo) o ${prod1}. El acarreo de +${carry1} subirá automáticamente a las decenas.`
+                  : `Calcula ${u_top} × ${bottom} y escribe el resultado para colocarlo en las unidades.`,
                 expected: u_res,
                 altExpected: prod1,
                 badge: `${u_top} × ${bottom}`,
-                hint: `${u_top} × ${bottom} es ${prod1}. Puedes escribir ${u_res} (unidades) o ${prod1}.`
+                hint: `${u_top} × ${bottom} = ${prod1}. Pon ${u_res} para colocar las unidades.`
               },
               {
+                stepType: 'mul_tens',
                 instruction: carry1 > 0
-                  ? `Decenas + Acarreo: (${d_top} × ${bottom}) + ${carry1}`
-                  : `Decenas: Multiplica ${d_top} × ${bottom}`,
+                  ? `Decenas con acarreo: (${d_top} × ${bottom}) + ${carry1}`
+                  : `Multiplica las Decenas: ${d_top} × ${bottom}`,
                 desc: carry1 > 0
-                  ? `Multiplica ${d_top} × ${bottom} = ${d_top * bottom}, y súmale el acarreo de +${carry1} que llevabas.`
-                  : `Multiplica ${d_top} × ${bottom} para completar el producto en la pizarra.`,
+                  ? `Multiplica ${d_top} × ${bottom} = ${d_top * bottom}, y súmale el +${carry1} que llevabas arriba.`
+                  : `Calcula ${d_top} × ${bottom} para completar el resultado de las decenas.`,
                 expected: prod2,
-                badge: carry1 > 0 ? `(${d_top}×${bottom})+${carry1}` : `${d_top} × ${bottom}`,
-                hint: `Calcula ${d_top * bottom} + ${carry1} = ${prod2}.`
+                badge: carry1 > 0 ? `(${d_top} × ${bottom}) + ${carry1}` : `${d_top} × ${bottom}`,
+                hint: `Multiplica ${d_top} × ${bottom} = ${d_top * bottom}, más ${carry1} de acarreo = ${prod2}.`
               }
             ];
 
@@ -885,6 +887,9 @@
               mode: '1digit',
               top,
               bottom,
+              u_top,
+              d_top,
+              prod1,
               u_res,
               carry1,
               prod2,
@@ -901,22 +906,25 @@
 
             const steps = [
               {
-                instruction: `1er Producto Parcial: ${top} × ${u_bot}`,
-                desc: `Multiplica todo el número superior (${top}) por la cifra de las unidades del multiplicador (${u_bot}).`,
+                stepType: 'partial_1',
+                instruction: `1er Renglón Parcial: ${top} × ${u_bot} (Unidades)`,
+                desc: `Multiplica todo el número superior (${top}) por la cifra de las unidades (${u_bot}).`,
                 expected: partial1,
                 badge: `${top} × ${u_bot}`,
-                hint: `Multiplica ${top} por ${u_bot} = ${partial1}.`
+                hint: `Multiplica ${top} × ${u_bot} = ${partial1}.`
               },
               {
-                instruction: `2do Producto Parcial: ${top} × ${d_bot}`,
-                desc: `Multiplica el número superior (${top}) por la cifra de las decenas (${d_bot}). Se colocará desplazado un lugar a la izquierda.`,
+                stepType: 'partial_2',
+                instruction: `2do Renglón Parcial: ${top} × ${d_bot} (Decenas)`,
+                desc: `Multiplica el número superior (${top}) por las decenas (${d_bot}). Se escribirá desplazado un espacio a la izquierda.`,
                 expected: partial2,
                 badge: `${top} × ${d_bot}`,
-                hint: `Multiplica ${top} por ${d_bot} = ${partial2}.`
+                hint: `Multiplica ${top} × ${d_bot} = ${partial2}.`
               },
               {
-                instruction: `Suma Total de Columnas: ${partial1} + ${partial2 * 10}`,
-                desc: `Suma el primer renglón (${partial1}) más el segundo renglón desplazado (${partial2}0) para obtener el producto total.`,
+                stepType: 'sum_partials',
+                instruction: `Suma de Columnas: ${partial1} + ${partial2 * 10}`,
+                desc: `Suma el primer renglón (${partial1}) más el segundo renglón desplazado (${partial2}0) para obtener el resultado definitivo.`,
                 expected: finalProduct,
                 badge: `${partial1} + ${partial2 * 10}`,
                 hint: `Suma ${partial1} + ${partial2 * 10} = ${finalProduct}.`
@@ -1354,47 +1362,71 @@
       switch (p.topic) {
         case 'col_mul': {
           if (p.mode === '1digit') {
-            const showCarry = idx >= 1 && p.carry1 > 0;
             const unitDone = idx >= 1;
             const decDone = idx >= 2;
+            const showCarry = unitDone && p.carry1 > 0;
 
             html = `
-              <div class="flex flex-col items-end font-mono text-3xl sm:text-4xl font-bold tracking-widest text-slate-800 space-y-1.5 bg-slate-50/70 px-8 py-6 rounded-3xl border border-slate-200/80 shadow-inner">
-                <!-- Fila de Acarreo Dinámico -->
-                <div class="h-8 flex items-center justify-end w-full pr-14">
-                  ${showCarry
-                    ? `<span class="px-2.5 py-0.5 rounded-xl bg-amber-100 border-2 border-amber-400 text-amber-800 text-sm font-extrabold animate-pop-in shadow-xs" title="Acarreo">+${p.carry1}</span>`
-                    : `<span class="text-xs text-slate-300 font-fredoka font-normal">sin acarreo</span>`}
+              <div class="flex flex-col items-center">
+                <!-- Indicador de estado de la columna -->
+                <div class="mb-3 px-3 py-1 rounded-full text-xs font-fredoka font-bold flex items-center gap-1.5 ${
+                  decDone 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : (unitDone ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-indigo-100 text-indigo-800 border border-indigo-200')
+                }">
+                  <span>${decDone ? '🎉 ¡Multiplicación completa!' : (unitDone ? '✨ Unidades listas. Ahora resuelve decenas' : '👉 Paso 1: Resuelve la columna de unidades')}</span>
                 </div>
 
-                <!-- Multiplicando Superior -->
-                <div class="pr-3 text-4xl text-slate-900 tracking-[0.25em]">${p.top}</div>
+                <div class="flex flex-col items-end font-mono text-3xl sm:text-4xl font-bold tracking-widest text-slate-800 space-y-2 bg-slate-50/90 px-8 py-6 rounded-3xl border border-slate-200 shadow-inner min-w-[240px]">
+                  
+                  <!-- Fila de Acarreo Dinámico con animación -->
+                  <div class="h-9 flex items-center justify-end w-full pr-14">
+                    ${showCarry
+                      ? `<div class="flex items-center gap-1 px-3 py-1 rounded-xl bg-amber-200 border-2 border-amber-400 text-amber-900 text-xs sm:text-sm font-extrabold animate-pop-in shadow-xs" title="Llevamos ${p.carry1}">
+                          <span class="animate-bounce">⬆️</span> Llevamos +${p.carry1}
+                        </div>`
+                      : (unitDone ? `<span class="text-xs text-slate-400 font-fredoka font-medium">Sin acarreo</span>` : `<span class="text-xs text-slate-300 font-fredoka font-normal">Acarreo</span>`)}
+                  </div>
 
-                <!-- Multiplicador Inferior -->
-                <div class="flex items-center justify-between border-b-4 border-slate-800 pb-2 w-full pr-3">
-                  <span class="text-indigo-600 font-extrabold text-3xl mr-6">×</span>
-                  <span class="text-4xl text-indigo-950">${p.bottom}</span>
+                  <!-- Multiplicando Superior -->
+                  <div class="flex items-center justify-end w-full pr-2">
+                    <span class="px-2 transition-colors ${idx === 1 ? 'text-indigo-600 bg-indigo-50 rounded-lg' : ''}">${p.d_top}</span>
+                    <span class="px-2 transition-colors ${idx === 0 ? 'text-indigo-600 bg-indigo-50 rounded-lg' : ''}">${p.u_top}</span>
+                  </div>
+
+                  <!-- Multiplicador Inferior -->
+                  <div class="flex items-center justify-between border-b-4 border-slate-800 pb-2 w-full pr-2">
+                    <span class="text-indigo-600 font-extrabold text-3xl">×</span>
+                    <span class="px-2 text-indigo-950">${p.bottom}</span>
+                  </div>
+
+                  <!-- Casillas Dinámicas de Resultado Paso a Paso -->
+                  <div class="flex items-center justify-end gap-2.5 pt-2 pr-0 w-full">
+                    <!-- Columna de Decenas / Centenas -->
+                    <div class="min-w-[4rem] px-2 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
+                      idx === 1
+                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-md ring-4 ring-indigo-200'
+                        : (decDone ? 'bg-emerald-100 border-emerald-500 text-emerald-800 animate-pop-in shadow-sm font-extrabold' : 'bg-white border-dashed border-slate-300 text-slate-300')
+                    }">
+                      ${decDone ? p.prod2 : (idx === 1 ? '?' : '·')}
+                    </div>
+
+                    <!-- Columna de Unidades -->
+                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
+                      idx === 0
+                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-md ring-4 ring-indigo-200'
+                        : (unitDone ? 'bg-emerald-100 border-emerald-500 text-emerald-800 animate-pop-in shadow-sm font-extrabold' : 'bg-white border-dashed border-slate-300 text-slate-300')
+                    }">
+                      ${unitDone ? p.u_res : '?'}
+                    </div>
+                  </div>
                 </div>
 
-                <!-- Casillas Dinámicas de Resultado Paso a Paso -->
-                <div class="flex items-center justify-end gap-2.5 pt-3 pr-1">
-                  <!-- Decenas / Centenas -->
-                  <div class="min-w-[3.4rem] px-2 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
-                    idx === 1
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (decDone ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in shadow-sm' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${decDone ? p.prod2 : (idx === 1 ? '?' : '·')}
-                  </div>
-
-                  <!-- Unidades -->
-                  <div class="w-14 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
-                    idx === 0
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (unitDone ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in shadow-sm' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${unitDone ? p.u_res : '?'}
-                  </div>
+                <!-- Detalle explicativo al pie de la operación -->
+                <div class="mt-3 text-xs font-fredoka text-slate-500 text-center">
+                  ${unitDone 
+                    ? `<span class="text-emerald-700 font-bold">✓ Unidades resueltas: ${p.u_top} × ${p.bottom} = ${p.prod1} (colocamos ${p.u_res}${p.carry1 > 0 ? ` y sube +${p.carry1}` : ''})</span>` 
+                    : `Multiplica ${p.u_top} × ${p.bottom} y escribe el dígito de las unidades.`}
                 </div>
               </div>
             `;
@@ -1405,50 +1437,73 @@
             const sumDone = idx >= 3;
 
             html = `
-              <div class="flex flex-col items-end font-mono text-2xl sm:text-3xl font-bold text-slate-800 space-y-2 bg-slate-50/70 px-8 py-6 rounded-3xl border border-slate-200/80 shadow-inner min-w-[260px]">
-                <div class="pr-2 tracking-widest text-slate-900">${p.top}</div>
-                <div class="flex items-center justify-between w-full border-b-4 border-slate-800 pb-1.5 pr-2">
-                  <span class="text-indigo-600 font-extrabold">×</span>
-                  <span class="tracking-widest text-indigo-950">${p.bottom}</span>
+              <div class="flex flex-col items-center">
+                <div class="mb-3 px-3.5 py-1 rounded-full text-xs font-fredoka font-bold ${
+                  sumDone 
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
+                    : (row2Done ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-indigo-100 text-indigo-800 border border-indigo-200')
+                }">
+                  ${sumDone 
+                    ? '🎉 ¡Operación de dos cifras completada con éxito!' 
+                    : (row2Done 
+                        ? '👉 Paso 3: Suma las dos filas parciales' 
+                        : (row1Done ? '👉 Paso 2: Multiplica por las decenas (segundo renglón)' : '👉 Paso 1: Multiplica por las unidades (primer renglón)'))}
                 </div>
 
-                <!-- 1er Producto Parcial -->
-                <div class="w-full flex items-center justify-between gap-4 pt-1">
-                  <span class="text-[11px] font-fredoka text-slate-400">(${p.top}×${p.u_bot})</span>
-                  <div class="min-w-[110px] h-11 px-3 rounded-xl flex items-center justify-end border-2 ${
-                    idx === 0
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (row1Done ? 'bg-emerald-50 border-emerald-400 text-emerald-800 animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${row1Done ? p.partial1 : '?'}
-                  </div>
-                </div>
-
-                <!-- 2do Producto Parcial desplazado -->
-                <div class="w-full flex items-center justify-between gap-4 border-b-2 border-slate-400 pb-2">
-                  <span class="text-[11px] font-fredoka text-slate-400">+ (${p.top}×${p.d_bot}0)</span>
-                  <div class="flex items-center">
-                    <div class="min-w-[95px] h-11 px-3 rounded-xl flex items-center justify-end border-2 ${
-                      idx === 1
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (row2Done ? 'bg-emerald-50 border-emerald-400 text-emerald-800 animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${row2Done ? p.partial2 : (idx === 1 ? '?' : '·')}
+                <div class="flex flex-col items-end font-mono text-2xl sm:text-3xl font-bold text-slate-800 space-y-2 bg-slate-50/90 px-8 py-6 rounded-3xl border border-slate-200 shadow-inner min-w-[280px]">
+                  <div class="pr-2 tracking-widest text-slate-900">${p.top}</div>
+                  <div class="flex items-center justify-between w-full border-b-4 border-slate-800 pb-1.5 pr-2">
+                    <span class="text-indigo-600 font-extrabold">×</span>
+                    <div class="flex items-center tracking-widest">
+                      <span class="${idx === 1 ? 'text-indigo-600 font-extrabold bg-indigo-50 px-1 rounded' : ''}">${p.d_bot}</span>
+                      <span class="${idx === 0 ? 'text-indigo-600 font-extrabold bg-indigo-50 px-1 rounded' : ''}">${p.u_bot}</span>
                     </div>
-                    <span class="text-slate-400 pl-1 text-xl">0</span>
+                  </div>
+
+                  <!-- 1er Renglón Parcial (top × unidades) -->
+                  <div class="w-full flex items-center justify-between gap-4 pt-1">
+                    <span class="text-[11px] font-fredoka text-slate-400">(${p.top} × ${p.u_bot})</span>
+                    <div class="min-w-[120px] h-11 px-3 rounded-xl flex items-center justify-end border-2 transition-all ${
+                      idx === 0
+                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
+                        : (row1Done ? 'bg-emerald-100 border-emerald-500 text-emerald-800 font-extrabold animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
+                    }">
+                      ${row1Done ? p.partial1 : '?'}
+                    </div>
+                  </div>
+
+                  <!-- 2do Renglón Parcial desplazado (top × decenas) -->
+                  <div class="w-full flex items-center justify-between gap-4 border-b-2 border-slate-400 pb-2">
+                    <span class="text-[11px] font-fredoka text-slate-400">+ (${p.top} × ${p.d_bot}0)</span>
+                    <div class="flex items-center">
+                      <div class="min-w-[105px] h-11 px-3 rounded-xl flex items-center justify-end border-2 transition-all ${
+                        idx === 1
+                          ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
+                          : (row2Done ? 'bg-emerald-100 border-emerald-500 text-emerald-800 font-extrabold animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
+                      }">
+                        ${row2Done ? p.partial2 : (idx === 1 ? '?' : '·')}
+                      </div>
+                      <span class="text-slate-400 pl-1.5 text-xl font-bold">0</span>
+                    </div>
+                  </div>
+
+                  <!-- Renglón de Suma Final -->
+                  <div class="w-full flex items-center justify-between gap-4 pt-1">
+                    <span class="text-xs font-fredoka font-bold text-indigo-600">Total =</span>
+                    <div class="min-w-[140px] h-12 px-4 rounded-2xl flex items-center justify-end border-2 transition-all ${
+                      idx === 2
+                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
+                        : (sumDone ? 'bg-emerald-200 border-emerald-600 text-emerald-950 font-extrabold animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
+                    }">
+                      ${sumDone ? p.finalProduct : (idx === 2 ? '?' : '·')}
+                    </div>
                   </div>
                 </div>
 
-                <!-- Suma Final -->
-                <div class="w-full flex items-center justify-between gap-4 pt-1">
-                  <span class="text-xs font-fredoka font-bold text-indigo-600">Total =</span>
-                  <div class="min-w-[130px] h-12 px-4 rounded-2xl flex items-center justify-end border-2 ${
-                    idx === 2
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (sumDone ? 'bg-emerald-100 border-emerald-500 text-emerald-900 animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${sumDone ? p.finalProduct : (idx === 2 ? '?' : '·')}
-                  </div>
+                <div class="mt-3 text-xs font-fredoka text-slate-500 text-center">
+                  ${row2Done 
+                    ? `<span class="text-emerald-700 font-bold">✓ Parciales listos: Suma ${p.partial1} + ${p.partial2 * 10} para terminar.</span>`
+                    : (row1Done ? `<span class="text-indigo-700 font-bold">✓ 1er renglón listo (${p.partial1}). Ahora calcula ${p.top} × ${p.d_bot}.</span>` : `Calcula ${p.top} × ${p.u_bot}.`)}
                 </div>
               </div>
             `;
