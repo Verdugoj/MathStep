@@ -1,2435 +1,963 @@
-<!-- ... existing code ... -->
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700;800&display=swap" rel="stylesheet">
-
-  <!-- PWA & MOBILE CONFIGURATION -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MathStep">
-  <link rel="apple-touch-icon" id="appleTouchIcon" href="">
-  <link rel="icon" id="dynamicFavicon" type="image/svg+xml" href="">
-  
-  <!-- MANIFEST LINK DINÁMICO -->
-  <link rel="manifest" id="manifestLink">
-
-  <!-- TAILWIND CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            fredoka: ['Fredoka', 'sans-serif'],
-            inter: ['Inter', 'sans-serif'],
-            mono: ['JetBrains Mono', 'monospace'],
-          },
-          colors: {
-            brand: {
-              50: '#EEF2FF',
-              100: '#E0E7FF',
-              200: '#C7D2FE',
-              500: '#6366F1',
-              600: '#4F46E5',
-              700: '#4338CA',
-            }
-          },
-          animation: {
-            'bounce-soft': 'bounceSoft 1.8s infinite',
-            'pulse-subtle': 'pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            'float-slow': 'floatSlow 4s ease-in-out infinite',
-            'glow-pulse': 'glowPulse 2s ease-in-out infinite',
-            'pop-in': 'popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards',
-            'shake': 'shake 0.4s cubic-bezier(.36,.07,.19,.97) both',
-          },
-          keyframes: {
-            bounceSoft: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-6px)' }
-            },
-            pulseSubtle: {
-              '0%, 100%': { opacity: '1' },
-              '50%': { opacity: '0.85' }
-            },
-            floatSlow: {
-              '0%, 100%': { transform: 'translateY(0px)' },
-              '50%': { transform: 'translateY(-8px)' }
-            },
-            glowPulse: {
-              '0%, 100%': { boxShadow: '0 0 15px rgba(99, 102, 241, 0.25)' },
-              '50%': { boxShadow: '0 0 25px rgba(99, 102, 241, 0.55)' }
-            },
-            popIn: {
-              '0%': { transform: 'scale(0.8)', opacity: '0' },
-              '100%': { transform: 'scale(1)', opacity: '1' }
-            },
-            shake: {
-              '10%, 90%': { transform: 'translate3d(-2px, 0, 0)' },
-              '20%, 80%': { transform: 'translate3d(4px, 0, 0)' },
-              '30%, 50%, 70%': { transform: 'translate3d(-6px, 0, 0)' },
-              '40%, 60%': { transform: 'translate3d(6px, 0, 0)' }
-            }
-          }
-        }
-      }
-    }
-  </script>
-
-  <!-- LIBRERÍAS DE APOYO -->
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-
-  <style>
-    /* Estilos dinámicos personalizados */
-    body {
-      background: radial-gradient(120% 120% at 50% 0%, #F5F7FF 0%, #EEF2FF 50%, #E0E7FF 100%);
-      min-height: 100vh;
-    }
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <!-- Control de Caché estricto -->
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    .glass-card {
-      background: rgba(255, 255, 255, 0.85);
-      backdrop-filter: blur(14px);
-      -webkit-backdrop-filter: blur(14px);
-      border: 1px solid rgba(255, 255, 255, 0.9);
-      box-shadow: 0 10px 30px -5px rgba(79, 70, 229, 0.08), 0 4px 12px -2px rgba(0, 0, 0, 0.03);
-    }
+    <!-- PWA Meta Tags -->
+    <meta name="theme-color" content="#4F46E5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>MathStep Cloud - Matemáticas Dinámicas</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fuentes -->
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
+    
+    <!-- Iconos y Utilidades -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-    .glass-card-hover {
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-    }
-    .glass-card-hover:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 16px 36px -6px rgba(79, 70, 229, 0.14);
-    }
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mathstep-local-dev';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "dummy-key",
+            projectId: "dummy-project",
+        };
 
-    .math-cell {
-      transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-    }
+        let db, auth, userAuth = null;
+        try {
+            const app = initializeApp(firebaseConfig);
+            db = getFirestore(app);
+            auth = getAuth(app);
+            
+            signInAnonymously(auth).then((cred) => {
+                userAuth = cred.user;
+                console.log("Conectado a la nube de forma segura.");
+            }).catch(e => console.log("Modo local activado.", e));
+        } catch(e) {
+            console.log("Firebase init skipped (offline mode).");
+        }
 
-    .target-highlight {
-      box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.35), 0 8px 20px -4px rgba(79, 70, 229, 0.3);
-      animation: targetPulse 1.8s infinite;
-    }
+        window.cloudDB = {
+            async saveProgress(expediente, data) {
+                if (!db || !userAuth) return;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
+                    await setDoc(docRef, data, { merge: true });
+                } catch(e) { console.error("Error guardando:", e); }
+            },
+            async loadProgress(expediente) {
+                if (!db || !userAuth) return null;
+                try {
+                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
+                    const docSnap = await getDoc(docRef);
+                    return docSnap.exists() ? docSnap.data() : null;
+                } catch(e) { return null; }
+            }
+        };
+    </script>
 
-    @keyframes targetPulse {
-      0%, 100% { transform: scale(1); border-color: #6366F1; }
-      50% { transform: scale(1.05); border-color: #4338CA; }
-    }
+    <!-- Generación del PWA Manifest Dinámico (Icono de Matemáticas) -->
+    <script>
+        const manifestStr = `{
+            "name": "MathStep Cloud",
+            "short_name": "MathStep",
+            "start_url": "./",
+            "display": "standalone",
+            "background_color": "#F8FAFC",
+            "theme_color": "#4F46E5",
+            "icons": [{
+                "src": "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='112' fill='url(%23g)'/><defs><linearGradient id='g' x1='0%' y1='0%' x2='100%' y2='100%'><stop offset='0%' stop-color='%237C3AED'/><stop offset='100%' stop-color='%234F46E5'/></linearGradient></defs><path d='M150 350 L200 350 L250 150 L380 150' fill='none' stroke='white' stroke-width='40' stroke-linecap='round' stroke-linejoin='round'/><circle cx='250' cy='250' r='120' fill='none' stroke='rgba(255,255,255,0.2)' stroke-width='20'/></svg>",
+                "sizes": "512x512",
+                "type": "image/svg+xml",
+                "purpose": "any maskable"
+            }]
+        }`;
+        const blob = new Blob([manifestStr], {type: 'application/json'});
+        const manifestURL = URL.createObjectURL(blob);
+        document.write(`<link rel="manifest" href="${manifestURL}">`);
+    </script>
 
-    /* Ocultar barra de desplazamiento manteniendo funcionalidad */
-    .no-scrollbar::-webkit-scrollbar { display: none; }
-    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-  </style>
-</head>
-<body class="font-inter text-slate-800 antialiased selection:bg-indigo-500 selection:text-white">
+    <!-- Registro del Service Worker Antiguo para DESTRUIRLO y limpiar caché -->
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister().then(function(boolean) {
+                        console.log("Service Worker viejo eliminado para limpiar caché.");
+                    });
+                }
+            });
+        }
+    </script>
 
-  <!-- CONTENEDOR GENERAL DE LA APLICACIÓN -->
-  <div class="min-h-screen flex flex-col justify-between">
-
-    <!-- NAVBAR SUPERIOR MODERNO Y VIBRANTE -->
-    <header class="w-full bg-white/80 backdrop-blur-md border-b border-indigo-100/70 sticky top-0 z-40 shadow-xs transition-all">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-3">
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
+        .font-fredoka { font-family: 'Fredoka', sans-serif; }
+        .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        <!-- LOGO Y TÍTULO CON ICONO MATEMÁTICO ANIMADO -->
-        <div class="flex items-center gap-3.5 group cursor-pointer" onclick="resetActiveProblem()">
-          <div class="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center text-white shadow-lg shadow-indigo-300/50 transform group-hover:scale-105 group-hover:rotate-2 transition-all duration-300 p-2">
-            <svg class="w-full h-full text-white filter drop-shadow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 13h2l2 6 4-13h10" />
-              <path d="M14 13h6" />
-              <path d="M17 10v6" />
-            </svg>
-          </div>
-          <div>
-            <div class="flex items-center gap-2">
-              <h1 class="font-fredoka text-2xl font-bold tracking-tight text-slate-900 group-hover:text-indigo-600 transition-colors">
-                Math<span class="text-indigo-600 group-hover:text-violet-600">Step</span>
-              </h1>
-              <span class="hidden md:inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200/60 font-fredoka shadow-xs">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> Dinámico
-              </span>
+        @keyframes popIn {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.1); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        @keyframes pulse-soft {
+            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.3); }
+            50% { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
+        }
+        .target-highlight {
+            animation: pulse-soft 1.5s infinite;
+            border: 2px solid #4F46E5 !important;
+            background-color: #EEF2FF !important;
+            color: #4F46E5 !important;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-4px); }
+            75% { transform: translateX(4px); }
+        }
+        .animate-shake { animation: shake 0.3s ease-in-out; }
+
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; }
+        
+        .math-frac { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; vertical-align: middle; }
+        .math-frac-line { width: 100%; height: 3px; background-color: currentColor; margin: 4px 0; border-radius: 2px; }
+        
+        .glow-success {
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+            color: #10B981 !important;
+        }
+
+        .slide-up { animation: slideUp 0.4s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Modal de Login / Registro en la Nube -->
+    <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-pop-in">
+            <div class="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-center relative overflow-hidden">
+                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
+                <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white relative z-10 backdrop-blur-md border border-white/20">
+                    <i data-lucide="cloud" class="w-8 h-8"></i>
+                </div>
+                <h2 class="font-fredoka text-2xl font-bold text-white relative z-10">Acceso a la Nube</h2>
+                <p class="text-indigo-100 text-sm mt-1 relative z-10">Guarda tu progreso desde cualquier dispositivo</p>
             </div>
-            <p class="text-xs text-slate-500 font-medium hidden sm:block">Aprende matemáticas paso a paso sin penalización por error</p>
-          </div>
+            <div class="p-6 space-y-4">
+                <div id="loginForm">
+                    <label class="block text-sm font-bold text-slate-700 mb-1">Expediente (8 dígitos)</label>
+                    <input type="text" id="expedienteInput" maxlength="8" pattern="[0-9]{8}" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-lg font-bold focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:outline-none transition-all" placeholder="Ej. 12345678">
+                </div>
+                
+                <div id="registerForm" class="hidden space-y-4 slide-up">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Ap. Paterno</label>
+                            <input type="text" id="apPaternoInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Ap. Materno</label>
+                            <input type="text" id="apMaternoInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre(s)</label>
+                        <input type="text" id="nombreInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Grupo</label>
+                        <input type="text" id="grupoInput" placeholder="Ej. 6-A" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Elige tu Avatar</label>
+                        <div class="flex gap-2 justify-between" id="avatarSelector">
+                            <div class="cursor-pointer text-2xl p-2 rounded-xl bg-indigo-100 border-2 border-indigo-500" onclick="selectAvatar(this, '🧑‍🎓')">🧑‍🎓</div>
+                            <div class="cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100" onclick="selectAvatar(this, '👩‍🚀')">👩‍🚀</div>
+                            <div class="cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100" onclick="selectAvatar(this, '🦊')">🦊</div>
+                            <div class="cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100" onclick="selectAvatar(this, '🤖')">🤖</div>
+                            <div class="cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100" onclick="selectAvatar(this, '🦸‍♀️')">🦸‍♀️</div>
+                        </div>
+                    </div>
+                </div>
+
+                <button onclick="handleAuthSubmit()" id="authBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-lg py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 mt-2">
+                    Ingresar a la Nube
+                </button>
+            </div>
         </div>
+    </div>
 
-        <!-- CONTADORES, PWA Y PERFIL ESTUDIANTIL -->
-        <div class="flex items-center gap-2 sm:gap-3">
-          
-          <!-- BOTÓN PWA INSTALAR -->
-          <button id="pwaInstallBtn" onclick="triggerPwaInstall()" class="hidden md:flex items-center gap-1.5 px-3.5 py-2 bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white rounded-xl text-xs font-bold font-fredoka shadow-md shadow-indigo-200 hover:shadow-indigo-300 transition-all transform active:scale-95">
-            <i data-lucide="sparkles" class="w-4 h-4 text-amber-300 animate-spin-slow"></i>
-            <span>Instalar App</span>
-          </button>
-
-          <!-- BADGE DE PUNTOS TOTALES CON RESPLANDOR -->
-          <div class="flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-amber-50/90 border border-amber-200/80 shadow-xs">
-            <div class="w-8 h-8 rounded-xl bg-amber-500/20 flex items-center justify-center text-amber-600 font-bold">
-              🏅
+    <!-- Navbar -->
+    <header class="bg-white shadow-sm sticky top-0 z-50 border-b border-indigo-100">
+        <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-gradient-to-br from-indigo-600 to-violet-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-200">
+                    <span class="font-fredoka font-bold text-xl leading-none">MΣ</span>
+                </div>
+                <h1 class="font-fredoka text-xl sm:text-2xl font-bold text-slate-800 tracking-tight hidden sm:block">MathStep</h1>
             </div>
-            <div class="text-left">
-              <span class="block text-[10px] font-bold uppercase tracking-wider text-amber-700">Puntaje</span>
-              <span id="headerPointsBadge" class="font-fredoka text-base sm:text-lg font-bold text-amber-900 leading-none">0 pts</span>
+            
+            <div class="flex items-center gap-3">
+                <div class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 shadow-inner">
+                    <span class="text-amber-500"><i data-lucide="medal" class="w-5 h-5"></i></span>
+                    <span class="font-bold text-amber-700" id="totalPoints">0 pts</span>
+                </div>
+                <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors" onclick="cerrarSesion()">
+                    <span class="text-xl" id="userAvatarDisplay">🧑‍🎓</span>
+                    <span class="hidden sm:block font-medium text-sm text-slate-700 truncate max-w-[120px]" id="userNameDisplay">...</span>
+                </div>
             </div>
-          </div>
-
-          <!-- BOTÓN PERFIL DEL ESTUDIANTE -->
-          <button id="userDropdownBtn" onclick="openStudentModal()" class="flex items-center gap-2.5 px-3.5 py-1.5 rounded-2xl bg-white border border-slate-200 shadow-xs hover:border-indigo-300 hover:shadow-md transition-all active:scale-95">
-            <span id="headerAvatar" class="text-xl">🧑‍🎓</span>
-            <div class="text-left hidden sm:block">
-              <p id="headerStudentName" class="text-xs font-bold text-slate-800 leading-tight">Estudiante</p>
-              <p id="headerExpediente" class="text-[10px] text-slate-400 font-mono">Exp: --------</p>
-            </div>
-            <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400"></i>
-          </button>
         </div>
-
-      </div>
     </header>
 
-    <!-- CUERPO PRINCIPAL DINÁMICO -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 py-6 w-full space-y-6">
-
-      <!-- SELECTOR DINÁMICO DE TEMAS ORGANIZADOS EN GRUPOS -->
-      <section class="glass-card rounded-3xl p-5 border border-indigo-100/60 space-y-4">
+    <!-- Main Layout -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
         
-        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-          <div class="flex items-center gap-2">
-            <div class="p-2 rounded-xl bg-indigo-100 text-indigo-700">
-              <i data-lucide="layers" class="w-5 h-5"></i>
-            </div>
-            <div>
-              <h2 class="font-fredoka text-lg font-bold text-slate-800">Elige un Tema de Aprendizaje</h2>
-              <p class="text-xs text-slate-500">Selecciona el módulo para comenzar a practicar paso a paso</p>
-            </div>
-          </div>
-
-          <!-- SELECTOR DE DIFICULTAD INTERACTIVO -->
-          <div class="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200 shadow-inner">
-            <button onclick="setDifficulty('facil')" id="diff-facil" class="diff-btn px-3.5 py-1.5 rounded-xl font-fredoka text-xs font-bold transition-all duration-200 bg-white text-indigo-700 shadow-sm">
-              Fácil <span class="text-[10px] opacity-75 font-mono">(+1 pt)</span>
-            </button>
-            <button onclick="setDifficulty('medio')" id="diff-medio" class="diff-btn px-3.5 py-1.5 rounded-xl font-fredoka text-xs font-bold transition-all duration-200 text-slate-600 hover:text-indigo-600">
-              Medio <span class="text-[10px] opacity-75 font-mono">(+2 pts)</span>
-            </button>
-            <button onclick="setDifficulty('reto')" id="diff-reto" class="diff-btn px-3.5 py-1.5 rounded-xl font-fredoka text-xs font-bold transition-all duration-200 text-slate-600 hover:text-indigo-600">
-              Reto <span class="text-[10px] opacity-75 font-mono">(+3 pts)</span>
-            </button>
-          </div>
-        </div>
-
-        <!-- GRILLA DE BOTONES DE TEMAS ORGANIZADOS POR SECCIONES -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-3.5 pt-1">
-          
-          <!-- BLOQUE 1: ALGORITMOS EN COLUMNA -->
-          <div class="bg-indigo-50/50 rounded-2xl p-3 border border-indigo-100 flex flex-col justify-between space-y-2">
-            <span class="text-[11px] font-bold text-indigo-600 tracking-wider uppercase font-fredoka flex items-center gap-1.5">
-              <span>📐</span> Aritmética en Columna
-            </span>
-            <div class="grid grid-cols-2 gap-2">
-              <button onclick="selectTopic('col_mul')" id="topic-col_mul" class="topic-btn flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-fredoka text-xs font-bold text-slate-700 shadow-xs hover:shadow-sm transition-all text-left">
-                <span class="text-base">✖️</span> Multiplicación
-              </button>
-              <button onclick="selectTopic('col_div')" id="topic-col_div" class="topic-btn flex items-center gap-2 p-2.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-400 font-fredoka text-xs font-bold text-slate-700 shadow-xs hover:shadow-sm transition-all text-left">
-                <span class="text-base">🏠</span> División Casita
-              </button>
-            </div>
-          </div>
-
-          <!-- BLOQUE 2: TEORÍA DE NÚMEROS (3 JUNTOS) -->
-          <div class="bg-emerald-50/50 rounded-2xl p-3 border border-emerald-100 flex flex-col justify-between space-y-2">
-            <span class="text-[11px] font-bold text-emerald-700 tracking-wider uppercase font-fredoka flex items-center gap-1.5">
-              <span>🌱</span> Teoría de Números
-            </span>
-            <div class="grid grid-cols-3 gap-1.5">
-              <button onclick="selectTopic('primes')" id="topic-primes" class="topic-btn flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs hover:shadow-sm transition-all text-center">
-                <span class="text-base mb-0.5">🌱</span> Factores
-              </button>
-              <button onclick="selectTopic('mcd')" id="topic-mcd" class="topic-btn flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs hover:shadow-sm transition-all text-center">
-                <span class="text-base mb-0.5">🎯</span> MCD
-              </button>
-              <button onclick="selectTopic('mcm')" id="topic-mcm" class="topic-btn flex flex-col items-center justify-center p-2 rounded-xl bg-white border border-slate-200 hover:border-emerald-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs hover:shadow-sm transition-all text-center">
-                <span class="text-base mb-0.5">🚀</span> mcm
-              </button>
-            </div>
-          </div>
-
-          <!-- BLOQUE 3: MUNDO DE FRACCIONES (4 JUNTOS) -->
-          <div class="bg-amber-50/50 rounded-2xl p-3 border border-amber-100 flex flex-col justify-between space-y-2">
-            <span class="text-[11px] font-bold text-amber-700 tracking-wider uppercase font-fredoka flex items-center gap-1.5">
-              <span>🍰</span> Fracciones
-            </span>
-            <div class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-2 lg:grid-cols-4 gap-1.5">
-              <button onclick="selectTopic('frac_eq')" id="topic-frac_eq" class="topic-btn p-2 rounded-xl bg-white border border-slate-200 hover:border-amber-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs transition-all text-center">
-                ⚖️ Equiv.
-              </button>
-              <button onclick="selectTopic('frac_add')" id="topic-frac_add" class="topic-btn p-2 rounded-xl bg-white border border-slate-200 hover:border-amber-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs transition-all text-center">
-                ➕ Suma
-              </button>
-              <button onclick="selectTopic('frac_mul')" id="topic-frac_mul" class="topic-btn p-2 rounded-xl bg-white border border-slate-200 hover:border-amber-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs transition-all text-center">
-                ✖️ Mult.
-              </button>
-              <button onclick="selectTopic('frac_div')" id="topic-frac_div" class="topic-btn p-2 rounded-xl bg-white border border-slate-200 hover:border-amber-400 font-fredoka text-[11px] font-bold text-slate-700 shadow-xs transition-all text-center">
-                ➗ Divis.
-              </button>
-            </div>
-          </div>
-
-        </div>
-
-      </section>
-
-      <!-- SECCIÓN PRINCIPAL: ÁREA DE TRABAJO MATEMÁTICO DINÁMICO & LATERAL -->
-      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        
-        <!-- COLUMNA PRINCIPAL DE EJERCICIOS (8 COLUMNAS) -->
-        <div class="lg:col-span-8 space-y-5">
-          
-          <!-- TARJETA DINÁMICA DE INSTRUCCIÓN Y PASO ACTUAL -->
-          <div class="glass-card rounded-3xl p-5 sm:p-6 border border-indigo-100 shadow-lg relative overflow-hidden">
-            <!-- Indicador superior de progreso -->
-            <div class="flex items-center justify-between gap-4 pb-4 border-b border-slate-100">
-              <div class="flex items-center gap-3">
-                <span id="topicBadgeIcon" class="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center text-xl shadow-md shadow-indigo-300">
-                  ✖️
-                </span>
-                <div>
-                  <h3 id="currentTopicTitle" class="font-fredoka text-lg sm:text-xl font-bold text-slate-900 leading-tight">
-                    Multiplicación en Columna
-                  </h3>
-                  <div class="flex items-center gap-2 mt-0.5">
-                    <span id="currentDiffBadge" class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-800 font-fredoka">
-                      Fácil (+1 pt)
-                    </span>
-                    <span class="text-xs text-slate-400 font-medium">Resolución guiada paso a paso</span>
-                  </div>
-                </div>
-              </div>
-              <button onclick="resetActiveProblem()" class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold font-fredoka text-indigo-600 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition-all active:scale-95 cursor-pointer">
-                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
-                <span class="hidden sm:inline">Nuevo Ejercicio</span>
-              </button>
-            </div>
-
-            <!-- BARRA DINÁMICA DE PROGRESO DE PASOS Y NODOS INTERACTIVOS -->
-            <div class="pt-4 space-y-2.5">
-              <div class="flex items-center justify-between text-xs font-fredoka">
-                <span id="stepCounterText" class="text-indigo-600 font-bold flex items-center gap-1.5">
-                  <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping"></span>
-                  Paso 1 de 3
-                </span>
-                <div id="stepNodesContainer" class="flex items-center gap-1.5">
-                  <!-- Bolitas de pasos dinámicas -->
-                </div>
-                <span id="stepPercentage" class="text-slate-500 font-bold">0% completado</span>
-              </div>
-              <div class="w-full h-3 bg-slate-100 rounded-full overflow-hidden p-0.5 border border-slate-200/80 shadow-inner">
-                <div id="stepProgressBar" class="h-full bg-gradient-to-r from-indigo-500 via-violet-500 to-emerald-500 rounded-full transition-all duration-500 ease-out" style="width: 15%"></div>
-              </div>
-            </div>
-
-            <!-- TARJETA INFORMATIVA DEL PASO ACTUAL CON ESTILO GUÍA -->
-            <div id="stepInstructionCard" class="mt-4 p-4 rounded-2xl bg-gradient-to-r from-indigo-50/90 via-indigo-50/40 to-white border border-indigo-100 flex items-start justify-between gap-3.5 shadow-xs transition-all">
-              <div class="flex items-start gap-3.5">
-                <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex-shrink-0 flex items-center justify-center shadow-sm">
-                  <i data-lucide="zap" class="w-5 h-5 text-amber-300"></i>
-                </div>
-                <div class="space-y-1">
-                  <div class="flex items-center gap-2">
-                    <span id="stepPillLabel" class="px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-100 text-indigo-700 rounded-md font-fredoka">Acción actual</span>
-                    <h4 id="stepInstructionTitle" class="font-fredoka text-sm sm:text-base font-bold text-indigo-950">
-                      Multiplica las unidades
-                    </h4>
-                  </div>
-                  <p id="stepInstructionDesc" class="text-xs sm:text-sm text-slate-600 leading-relaxed font-medium">
-                    Multiplica el dígito inferior de las unidades por el número superior.
-                  </p>
-                </div>
-              </div>
-              <div id="expectedOperationBadge" class="hidden sm:flex items-center px-3 py-1.5 rounded-xl bg-white border border-indigo-200 font-mono text-xs font-extrabold text-indigo-700 shadow-2xs shrink-0">
-                <!-- Operación directa -->
-              </div>
-            </div>
-
-          </div>
-
-          <!-- LIENZO MATEMÁTICO DINÁMICO (RENDERIZADO VISUAL DEL PROBLEMA) -->
-          <div id="mathCanvasWrapper" class="glass-card rounded-3xl p-6 sm:p-8 border border-indigo-100 text-center min-h-[360px] flex flex-col justify-between relative shadow-lg overflow-hidden">
+        <!-- Sidebar: Menu -->
+        <aside class="lg:col-span-1 space-y-6">
             
-            <!-- Indicador flotante de actualización en vivo -->
-            <div class="flex items-center justify-between w-full border-b border-slate-100 pb-3 mb-2">
-              <span class="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 font-fredoka uppercase tracking-wider">
-                <span class="w-2 h-2 rounded-full bg-indigo-500 animate-pulse"></span> Pizarra Interactiva en Vivo
-              </span>
-              <span id="liveStepStatusBadge" class="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 font-fredoka">
-                Esperando respuesta en casilla resaltada...
-              </span>
+            <!-- Selector de Dificultad -->
+            <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex justify-between relative overflow-hidden">
+                <div id="diffBgSelector" class="absolute top-1.5 bottom-1.5 left-1.5 w-[31%] bg-green-100 border-2 border-green-200 rounded-xl transition-all duration-300 z-0"></div>
+                <button onclick="setDifficulty('facil')" id="diff-facil" class="flex-1 py-2 text-sm font-bold text-green-700 z-10 transition-colors">Fácil (+1)</button>
+                <button onclick="setDifficulty('medio')" id="diff-medio" class="flex-1 py-2 text-sm font-bold text-slate-500 z-10 transition-colors">Medio (+2)</button>
+                <button onclick="setDifficulty('reto')" id="diff-reto" class="flex-1 py-2 text-sm font-bold text-slate-500 z-10 transition-colors">Reto (+3)</button>
             </div>
 
-            <div class="w-full flex-1 flex justify-center items-center py-4 overflow-x-auto">
-              <!-- CONTENEDOR DINÁMICO DEL LIENZO MATEMÁTICO -->
-              <div id="mathCanvas" class="w-full flex justify-center items-center text-slate-800 transition-all font-mono select-none">
-                <!-- Se inyecta dinámicamente según el tema y el paso actual -->
-              </div>
-            </div>
-
-            <!-- ÁREA DE ENTRADA INTERACTIVA DEL ESTUDIANTE -->
-            <div class="mt-4 pt-5 border-t border-slate-100/90 w-full max-w-md mx-auto space-y-3">
-              <form id="stepForm" onsubmit="handleStepSubmit(event)" class="flex items-center gap-2">
-                <div class="relative flex-1">
-                  <input 
-                    type="number" 
-                    id="stepInput" 
-                    inputmode="numeric" 
-                    placeholder="Escribe el valor de [ ? ]..." 
-                    autocomplete="off"
-                    class="w-full px-4 py-3.5 rounded-2xl border-2 border-indigo-300 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 outline-hidden font-fredoka text-lg sm:text-xl font-bold text-slate-800 text-center shadow-inner transition-all placeholder:text-slate-300 placeholder:font-normal placeholder:text-sm"
-                    required
-                  >
-                  <span class="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none font-fredoka text-xs hidden sm:inline">
-                    ↵ Enter
-                  </span>
+            <!-- Selector de Temas -->
+            <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 overflow-y-auto max-h-[60vh] lg:max-h-none space-y-5">
+                
+                <div>
+                    <h2 class="font-fredoka text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Aritmética Paso a Paso</h2>
+                    <div class="space-y-1">
+                        <button onclick="setTopic('col_mul')" id="btn-col_mul" class="menu-btn active w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg text-white"><i data-lucide="x" class="w-4 h-4"></i></div> Multiplicar
+                        </button>
+                        <button onclick="setTopic('col_div')" id="btn-col_div" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="divide" class="w-4 h-4"></i></div> División Casita
+                        </button>
+                    </div>
                 </div>
 
-                <button 
-                  type="submit" 
-                  id="submitStepBtn" 
-                  class="px-5 sm:px-6 py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white rounded-2xl font-fredoka font-bold text-sm sm:text-base shadow-md shadow-indigo-200 hover:shadow-indigo-300 transition-all transform active:scale-95 flex items-center gap-2 flex-shrink-0 cursor-pointer"
-                >
-                  <span>Avanzar</span>
-                  <i data-lucide="arrow-right-circle" class="w-5 h-5"></i>
-                </button>
-              </form>
-
-              <!-- MENSAJE DE RETROALIMENTACIÓN DINÁMICO FLOTANTE -->
-              <div id="feedbackMessage" class="hidden text-center py-2 px-4 rounded-xl text-xs sm:text-sm font-fredoka font-bold transition-all animate-pop-in">
-                <!-- Retroalimentación dinámica -->
-              </div>
-
-              <!-- PISTA O AYUDA PEDAGÓGICA SIN PENALIZACIÓN -->
-              <div class="flex items-center justify-between text-xs text-slate-400 font-medium px-2">
-                <span class="flex items-center gap-1">
-                  <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-500"></i>
-                  Los errores no quitan puntos
-                </span>
-                <button type="button" onclick="showPedagogicalHint()" class="text-indigo-600 hover:text-indigo-700 font-bold hover:underline flex items-center gap-1">
-                  <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
-                  ¿Necesitas una pista?
-                </button>
-              </div>
-            </div>
-
-          </div>
-
-        </div>
-
-        <!-- COLUMNA LATERAL: EXPEDIENTE, CONTADORES POR TEMA Y LOGROS (4 COLUMNAS) -->
-        <div class="lg:col-span-4 space-y-5">
-          
-          <!-- TARJETA DEL ESTUDIANTE Y EXPEDIENTE ESCOLAR -->
-          <div class="glass-card rounded-3xl p-5 border border-indigo-100 shadow-md space-y-4">
-            <div class="flex items-center justify-between">
-              <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider font-fredoka flex items-center gap-1.5">
-                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Perfil Escolar
-              </span>
-              <span class="text-xs text-indigo-600 font-bold font-fredoka hover:underline cursor-pointer" onclick="openStudentModal()">
-                Editar
-              </span>
-            </div>
-
-            <div class="flex items-center gap-3.5">
-              <div id="sidebarAvatar" class="w-14 h-14 rounded-2xl bg-indigo-50 border border-indigo-100 flex items-center justify-center text-3xl shadow-inner">
-                🧑‍🎓
-              </div>
-              <div class="space-y-0.5 overflow-hidden">
-                <h4 id="sidebarStudentName" class="font-fredoka text-base font-bold text-slate-800 truncate">
-                  Estudiante 1
-                </h4>
-                <div class="flex items-center gap-2 text-xs font-mono text-slate-500">
-                  <span>Exp: <strong id="sidebarExpediente" class="text-indigo-700">--------</strong></span>
-                  <span>•</span>
-                  <span>Grupo: <strong id="sidebarGroup" class="text-slate-700">--</strong></span>
+                <div>
+                    <h2 class="font-fredoka text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Teoría de Números</h2>
+                    <div class="space-y-1">
+                        <button onclick="setTopic('primos')" id="btn-primos" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">🌱</div> Factores Primos
+                        </button>
+                        <button onclick="setTopic('mcd')" id="btn-mcd" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">🎯</div> MCD
+                        </button>
+                        <button onclick="setTopic('mcm')" id="btn-mcm" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">🚀</div> mcm
+                        </button>
+                    </div>
                 </div>
-              </div>
+
+                <div>
+                    <h2 class="font-fredoka text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mundo de Fracciones</h2>
+                    <div class="space-y-1">
+                        <button onclick="setTopic('frac_eq')" id="btn-frac_eq" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">⚖️</div> Equivalencias
+                        </button>
+                        <button onclick="setTopic('frac_sum')" id="btn-frac_sum" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="plus" class="w-4 h-4"></i></div> Suma / Resta
+                        </button>
+                        <button onclick="setTopic('frac_mul')" id="btn-frac_mul" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="x" class="w-4 h-4"></i></div> Multiplicar
+                        </button>
+                        <button onclick="setTopic('frac_div')" id="btn-frac_div" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
+                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="divide" class="w-4 h-4"></i></div> Dividir
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Problem Area -->
+        <section class="lg:col-span-3 flex flex-col gap-4">
+            
+            <!-- Tarjeta de Instrucción -->
+            <div class="bg-indigo-50 border border-indigo-100 p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-100 flex" id="stepProgressContainer">
+                    <div class="h-full bg-indigo-500 w-1/4 transition-all duration-300" id="stepProgressBar"></div>
+                </div>
+
+                <div class="flex gap-4 items-center mt-2 sm:mt-0 w-full sm:w-auto">
+                    <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 flex-shrink-0" id="headerIcon">
+                        <i data-lucide="lightbulb" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center gap-2 mb-0.5">
+                            <h3 class="font-fredoka text-lg font-bold text-indigo-900" id="instructionTitle">Paso 1</h3>
+                            <span id="currentDiffBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-200 text-indigo-800 uppercase tracking-wide">Fácil +1 pt</span>
+                        </div>
+                        <p class="text-indigo-700 text-sm leading-tight" id="instructionDesc">Cargando...</p>
+                    </div>
+                </div>
+                
+                <div class="flex gap-2 w-full sm:w-auto justify-end mt-2 sm:mt-0">
+                    <div class="bg-orange-100 text-orange-600 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 border border-orange-200 shadow-sm whitespace-nowrap">
+                        🔥 Racha: <span id="streakCount">0</span>
+                    </div>
+                    <button onclick="initProblem()" class="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-sm whitespace-nowrap">
+                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Nuevo
+                    </button>
+                </div>
             </div>
 
-            <!-- Resumen de puntos y resueltos -->
-            <div class="grid grid-cols-2 gap-2.5 pt-1">
-              <div class="p-3 rounded-2xl bg-indigo-50/70 border border-indigo-100/60 text-center">
-                <span class="block text-[10px] font-bold uppercase tracking-wider text-indigo-600 font-fredoka">Puntos Totales</span>
-                <span id="sidebarPoints" class="font-fredoka text-xl font-bold text-indigo-950">0</span>
-              </div>
-              <div class="p-3 rounded-2xl bg-emerald-50/70 border border-emerald-100/60 text-center">
-                <span class="block text-[10px] font-bold uppercase tracking-wider text-emerald-600 font-fredoka">Completados</span>
-                <span id="sidebarSolvedCount" class="font-fredoka text-xl font-bold text-emerald-950">0</span>
-              </div>
+            <!-- Lienzo Matemático -->
+            <div class="bg-white p-6 sm:p-10 rounded-3xl shadow-sm border border-slate-200 flex-1 flex flex-col items-center justify-center min-h-[350px] relative overflow-hidden">
+                
+                <div id="mathCanvas" class="w-full flex flex-col items-center justify-center overflow-x-auto pb-4 text-slate-800 min-h-[250px] transition-all duration-300">
+                    <!-- Contenido dinámico renderStep -->
+                </div>
+                
+                <!-- Mensaje Éxito -->
+                <div id="successMessage" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center p-6 z-10">
+                    <div class="bg-gradient-to-b from-emerald-50 to-white border-2 border-emerald-200 p-8 rounded-3xl text-center max-w-sm shadow-2xl animate-pop-in">
+                        <div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                            <i data-lucide="check-circle" class="w-12 h-12"></i>
+                        </div>
+                        <h2 class="font-fredoka text-3xl font-bold text-emerald-800 mb-2">¡Excelente!</h2>
+                        <p class="text-slate-600 font-medium mb-6">Problema resuelto correctamente.<br>Has ganado <span id="rewardText" class="font-bold text-emerald-600 text-xl">1</span> punto.</p>
+                        <button onclick="initProblem()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-8 rounded-2xl shadow-lg shadow-emerald-200/50 w-full transition-all flex justify-center items-center gap-2 transform hover:scale-[1.02]">
+                            Siguiente Ejercicio <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                        </button>
+                    </div>
+                </div>
             </div>
 
-            <!-- Racha y estado dinámico -->
-            <div class="flex items-center justify-between px-3.5 py-2 rounded-xl bg-amber-50/80 border border-amber-200/60 text-xs font-fredoka">
-              <span class="flex items-center gap-1.5 text-amber-800 font-bold">
-                🔥 Racha de Aciertos
-              </span>
-              <span id="streakCount" class="font-mono font-extrabold text-amber-900 bg-white px-2 py-0.5 rounded-md border border-amber-200 shadow-2xs">
-                0
-              </span>
-            </div>
-          </div>
-
-          <!-- PROGRESO DINÁMICO POR TEMA -->
-          <div class="glass-card rounded-3xl p-5 border border-indigo-100 shadow-md space-y-3.5">
-            <div class="flex items-center justify-between">
-              <h4 class="font-fredoka text-sm font-bold text-slate-800 flex items-center gap-1.5">
-                <i data-lucide="bar-chart-2" class="w-4 h-4 text-indigo-600"></i>
-                Progreso por Tema
-              </h4>
-              <span class="text-[11px] font-bold text-slate-400 font-fredoka">Aciertos</span>
+            <!-- Panel de Entrada -->
+            <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4" id="inputContainer">
+                <input type="number" id="answerInput" class="flex-1 bg-slate-50 border-2 border-slate-200 rounded-2xl px-6 py-4 text-2xl font-bold text-center text-indigo-900 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-300 placeholder:text-lg" placeholder="Escribe el número aquí..." autocomplete="off">
+                <button onclick="verifyStep()" id="verifyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 sm:w-auto w-full active:scale-95">
+                    Avanzar <i data-lucide="check" class="w-6 h-6"></i>
+                </button>
             </div>
 
-            <div id="topicsProgressList" class="space-y-2 max-h-[360px] overflow-y-auto pr-1">
-              <!-- Se inyecta dinámicamente con los contadores de cada uno de los 9 temas -->
-            </div>
-          </div>
-
-        </div>
-
-      </div>
-
+        </section>
     </main>
 
-    <!-- FOOTER SUTIL Y EDUCATIVO -->
-    <footer class="w-full border-t border-indigo-100/60 bg-white/50 backdrop-blur-xs py-4 text-center mt-10">
-      <p class="text-xs text-slate-400 font-medium font-fredoka">
-        MathStep Cloud • Plataforma Educativa Interactiva de Matemáticas Paso a Paso
-      </p>
-    </footer>
+    <script>
+        // --- 1. CONFIGURACIÓN Y ESTADO ---
+        lucide.createIcons();
+        let selectedAvatar = '🧑‍🎓';
+        
+        let studentData = {
+            expediente: '', nombre: '', apPaterno: '', apMaterno: '', grupo: '', avatar: '🧑‍🎓',
+            puntos: 0, racha: 0, resueltos: 0, stats: {}
+        };
+        
+        let currentState = {
+            topic: 'col_mul', difficulty: 'facil',
+            steps: [], stepIndex: 0, data: {}
+        };
 
-  </div>
-
-  <!-- MODAL DE ACCESO Y REGISTRO ESCOLAR (EXPEDIENTE 8 DÍGITOS) -->
-  <div id="authModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 transition-all">
-    <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl border border-slate-100 max-h-[92vh] overflow-y-auto space-y-5 animate-pop-in">
-      
-      <div class="text-center space-y-2">
-        <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 mx-auto flex items-center justify-center text-white shadow-lg shadow-indigo-200 p-2.5">
-          <svg class="w-full h-full text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 13h2l2 6 4-13h10" />
-            <path d="M14 13h6" />
-            <path d="M17 10v6" />
-          </svg>
-        </div>
-        <h2 class="font-fredoka text-2xl font-bold text-slate-800">Acceso Escolar MathStep</h2>
-        <p class="text-xs text-slate-500">Ingresa tu número de expediente para guardar tu avance en la red</p>
-      </div>
-
-      <!-- Pestañas Acceso / Registro -->
-      <div class="flex bg-slate-100 p-1 rounded-2xl">
-        <button type="button" onclick="switchAuthTab('login')" id="tab-login" class="flex-1 py-2 rounded-xl font-fredoka text-xs font-bold transition bg-white text-indigo-700 shadow-xs">
-          Ya tengo cuenta
-        </button>
-        <button type="button" onclick="switchAuthTab('register')" id="tab-register" class="flex-1 py-2 rounded-xl font-fredoka text-xs font-bold transition text-slate-600 hover:text-indigo-600">
-          Registrar nuevo alumno
-        </button>
-      </div>
-
-      <!-- FORMULARIO LOGIN RÁPIDO -->
-      <form id="loginForm" onsubmit="handleLoginSubmit(event)" class="space-y-4">
-        <div class="space-y-1 text-left">
-          <label class="text-xs font-bold text-slate-700 font-fredoka">Número de Expediente (8 dígitos)</label>
-          <div class="relative">
-            <input 
-              type="text" 
-              id="loginExpediente" 
-              pattern="[0-9]{8}" 
-              maxlength="8" 
-              placeholder="Ej. 20261234" 
-              required
-              class="w-full px-4 py-3 rounded-2xl border border-slate-200 focus:border-indigo-600 focus:ring-3 focus:ring-indigo-100 outline-hidden font-mono text-base tracking-widest text-slate-800 text-center font-bold"
-            >
-          </div>
-          <p class="text-[11px] text-slate-400">Introduce los 8 dígitos que te fueron asignados.</p>
-        </div>
-
-        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-indigo-600 to-violet-600 text-white rounded-2xl font-fredoka font-bold text-sm shadow-md shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-95">
-          Ingresar a mi cuenta
-        </button>
-      </form>
-
-      <!-- FORMULARIO REGISTRO COMPLETO -->
-      <form id="registerForm" onsubmit="handleRegisterSubmit(event)" class="hidden space-y-3.5 text-left">
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700 font-fredoka">Número de Expediente (8 dígitos)</label>
-          <input 
-            type="text" 
-            id="regExpediente" 
-            pattern="[0-9]{8}" 
-            maxlength="8" 
-            placeholder="8 dígitos numéricos" 
-            required
-            class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 focus:border-indigo-600 focus:ring-3 focus:ring-indigo-100 outline-hidden font-mono text-sm tracking-wider font-bold"
-          >
-        </div>
-
-        <div class="grid grid-cols-2 gap-2">
-          <div class="space-y-1">
-            <label class="text-xs font-bold text-slate-700 font-fredoka">Apellido Paterno</label>
-            <input type="text" id="regPaterno" required class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:border-indigo-600 outline-hidden font-medium">
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs font-bold text-slate-700 font-fredoka">Apellido Materno</label>
-            <input type="text" id="regMaterno" required class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:border-indigo-600 outline-hidden font-medium">
-          </div>
-        </div>
-
-        <div class="grid grid-cols-3 gap-2">
-          <div class="col-span-2 space-y-1">
-            <label class="text-xs font-bold text-slate-700 font-fredoka">Nombre(s)</label>
-            <input type="text" id="regNombres" required class="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:border-indigo-600 outline-hidden font-medium">
-          </div>
-          <div class="space-y-1">
-            <label class="text-xs font-bold text-slate-700 font-fredoka">Grupo</label>
-            <input type="text" id="regGrupo" placeholder="Ej: 3-A" required class="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm focus:border-indigo-600 outline-hidden font-medium text-center">
-          </div>
-        </div>
-
-        <!-- Selector de Avatar -->
-        <div class="space-y-1">
-          <label class="text-xs font-bold text-slate-700 font-fredoka">Selecciona tu Avatar</label>
-          <div class="flex items-center justify-between gap-1 p-2 bg-slate-50 rounded-xl border border-slate-100" id="avatarSelector">
-            <!-- Avatares dinámicos -->
-          </div>
-        </div>
-
-        <button type="submit" class="w-full py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-2xl font-fredoka font-bold text-sm shadow-md shadow-emerald-200 hover:shadow-emerald-300 transition-all active:scale-95">
-          Crear cuenta y comenzar
-        </button>
-      </form>
-
-      <div class="pt-2">
-        <button type="button" onclick="closeStudentModal()" class="w-full py-2 text-slate-400 hover:text-slate-600 text-xs font-fredoka font-medium">
-          Cerrar ventana
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- SCRIPT DINÁMICO COMPLETO DE LÓGICA MATEMÁTICA Y SINCRONIZACIÓN -->
-  <script>
-    /* ==============================================================
-       1. GENERADOR DE ICONO MATEMÁTICO DEDICADO Y MANIFIESTO PWA
-       ============================================================== */
-    const mathAppIconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
-      <defs>
-        <linearGradient id="mathBg" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#4F46E5"/>
-          <stop offset="50%" stop-color="#6366F1"/>
-          <stop offset="100%" stop-color="#7C3AED"/>
-        </linearGradient>
-        <linearGradient id="goldAccent" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stop-color="#FDE047"/>
-          <stop offset="100%" stop-color="#F59E0B"/>
-        </linearGradient>
-        <filter id="shadow" x="-10%" y="-10%" width="130%" height="130%">
-          <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#312E81" flood-opacity="0.45"/>
-        </filter>
-      </defs>
-      <rect width="512" height="512" rx="115" fill="url(#mathBg)"/>
-      <circle cx="256" cy="256" r="185" fill="#ffffff" fill-opacity="0.06"/>
-      <g filter="url(#shadow)">
-        <path d="M 125 150 L 205 150 L 165 200 L 205 250 L 125 250 L 140 232 L 180 232 L 152 198 L 182 168 L 140 168 Z" fill="url(#goldAccent)"/>
-        <circle cx="375" cy="155" r="12" fill="#E0E7FF"/>
-        <rect x="350" y="188" width="50" height="14" rx="7" fill="#E0E7FF"/>
-        <circle cx="375" cy="235" r="12" fill="#E0E7FF"/>
-        <path d="M 130 355 L 165 355 L 205 415 L 255 240 L 400 240" fill="none" stroke="#FFFFFF" stroke-width="26" stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="270" y="365" font-family="'Fredoka', sans-serif" font-weight="700" font-size="95" fill="url(#goldAccent)">x</text>
-        <text x="325" y="315" font-family="'Fredoka', sans-serif" font-weight="700" font-size="52" fill="#FFFFFF">²</text>
-      </g>
-    </svg>`;
-
-    const mathIconUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(mathAppIconSvg)}`;
-    document.getElementById('dynamicFavicon').href = mathIconUrl;
-    document.getElementById('appleTouchIcon').href = mathIconUrl;
-
-    const pwaManifest = {
-      name: "MathStep - Matemáticas Paso a Paso",
-      short_name: "MathStep",
-      description: "Aprende y practica operaciones matemáticas paso a paso con seguimiento escolar.",
-      start_url: "./",
-      scope: "./",
-      display: "standalone",
-      background_color: "#EEF2FF",
-      theme_color: "#4F46E5",
-      icons: [{ src: mathIconUrl, sizes: "192x192 512x512", type: "image/svg+xml", purpose: "any maskable" }]
-    };
-    const manifestBlob = new Blob([JSON.stringify(pwaManifest)], { type: 'application/json' });
-    document.getElementById('manifestLink').href = URL.createObjectURL(manifestBlob);
-
-    // Registro seguro de PWA
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        if (window.location.protocol === 'https:' || window.location.protocol === 'http:') {
-          try { navigator.serviceWorker.register('./sw.js').catch(() => {}); } catch(e){}
-        }
-      });
-    }
-
-    let deferredPrompt = null;
-    window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      deferredPrompt = e;
-      const btn = document.getElementById('pwaInstallBtn');
-      if (btn) btn.classList.remove('hidden');
-    });
-
-    window.triggerPwaInstall = function() {
-      if (deferredPrompt) {
-        deferredPrompt.prompt();
-        deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
-      } else {
-        showFeedback(true, "Para instalar en tu celular: abre el menú del navegador y elige 'Agregar a pantalla de inicio'.");
-      }
-    };
-
-    /* ==============================================================
-       2. ESTADO GLOBAL, PERFILES Y CONTADORES
-       ============================================================== */
-    const TOPIC_NAMES = {
-      col_mul: "Multiplicación en Columna",
-      col_div: "División Tradicional (Casita)",
-      primes: "Descomposición en Factores Primos",
-      mcd: "Máximo Común Divisor (MCD)",
-      mcm: "Mínimo Común Múltiplo (mcm)",
-      frac_eq: "Fracciones Equivalentes",
-      frac_add: "Suma y Resta de Fracciones",
-      frac_mul: "Multiplicación de Fracciones",
-      frac_div: "División de Fracciones"
-    };
-
-    const TOPIC_ICONS = {
-      col_mul: "✖️",
-      col_div: "🏠",
-      primes: "🌱",
-      mcd: "🎯",
-      mcm: "🚀",
-      frac_eq: "⚖️",
-      frac_add: "➕",
-      frac_mul: "✖️",
-      frac_div: "➗"
-    };
-
-    const AVATARS = ['🧑‍🎓', '👩‍🚀', '🦊', '🤖', '🦁', '🦉', '🐱', '🐼'];
-    let selectedAvatar = '🧑‍🎓';
-
-    // Alumno actual
-    let currentStudent = {
-      expediente: '10000000',
-      nombre: 'Estudiante 1',
-      paterno: '',
-      materno: '',
-      grupo: 'A',
-      avatar: '🧑‍🎓',
-      puntos: 0,
-      streak: 0,
-      solvedCount: 0,
-      topicStats: {
-        col_mul: { solved: 0, pts: 0 },
-        col_div: { solved: 0, pts: 0 },
-        primes: { solved: 0, pts: 0 },
-        mcd: { solved: 0, pts: 0 },
-        mcm: { solved: 0, pts: 0 },
-        frac_eq: { solved: 0, pts: 0 },
-        frac_add: { solved: 0, pts: 0 },
-        frac_mul: { solved: 0, pts: 0 },
-        frac_div: { solved: 0, pts: 0 },
-      }
-    };
-
-    let activeTopic = 'col_mul';
-    let activeDifficulty = 'facil'; // 'facil' (+1), 'medio' (+2), 'reto' (+3)
-    let currentProblem = null;
-    let currentStepIndex = 0;
-
-    /* ==============================================================
-       3. EFECTOS DE AUDIO Y MICROINTERACCIONES
-       ============================================================== */
-    let synth = null;
-    function playSound(type) {
-      try {
-        if (!synth && window.Tone) {
-          synth = new Tone.PolySynth(Tone.Synth).toDestination();
-          synth.volume.value = -8;
-        }
-        if (synth) {
-          Tone.start();
-          if (type === 'step') {
-            synth.triggerAttackRelease(['E5', 'G5'], '16n');
-          } else if (type === 'success') {
-            synth.triggerAttackRelease(['C5', 'E5', 'G5', 'C6'], '8n');
-          } else if (type === 'error') {
-            synth.triggerAttackRelease(['D4'], '16n');
-          }
-        }
-      } catch (e) {}
-    }
-
-    function triggerConfettiBurst() {
-      if (window.confetti) {
-        confetti({
-          particleCount: 60,
-          spread: 70,
-          origin: { y: 0.65 },
-          colors: ['#4F46E5', '#6366F1', '#10B981', '#F59E0B']
-        });
-      }
-    }
-
-    function triggerStepBurst() {
-      if (window.confetti) {
-        confetti({
-          particleCount: 18,
-          spread: 45,
-          startVelocity: 25,
-          origin: { y: 0.75 },
-          colors: ['#6366F1', '#34D399', '#FBBF24']
-        });
-      }
-    }
-
-    /* ==============================================================
-       4. GENERADORES MATEMÁTICOS PASO A PASO (DINÁMICOS)
-       ============================================================== */
-    function getRandomInt(min, max) {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    }
-
-    function gcd(a, b) {
-      return b === 0 ? a : gcd(b, a % b);
-    }
-
-    function lcm(a, b) {
-      return (a * b) / gcd(a, b);
-    }
-
-    function getPrimeFactors(n) {
-      const factors = [];
-      let divisor = 2;
-      let curr = n;
-      while (curr >= 2) {
-        if (curr % divisor === 0) {
-          factors.push(divisor);
-          curr = Math.floor(curr / divisor);
-        } else {
-          divisor++;
-        }
-      }
-      return factors;
-    }
-
-    /* ==============================================================
-       4. GENERADORES MATEMÁTICOS PASO A PASO 100% DINÁMICOS
-          Cada paso actualiza el lienzo visualmente en todas las dificultades
-       ============================================================== */
-    function createProblem(topic, difficulty) {
-      switch (topic) {
-        case 'col_mul': {
-          let top, bottom;
-          if (difficulty === 'facil') {
-            top = getRandomInt(13, 48);
-            bottom = getRandomInt(2, 6);
-          } else if (difficulty === 'medio') {
-            top = getRandomInt(35, 96);
-            bottom = getRandomInt(4, 9);
-          } else {
-            top = getRandomInt(24, 85);
-            bottom = getRandomInt(12, 26);
-          }
-
-          const topDigits = String(top).split('').map(Number);
-          const u_top = top % 10;
-          const d_top = Math.floor(top / 10);
-
-          if (bottom < 10) {
-            // Multiplicación por 1 cifra (Fácil y Medio) desglosada dígito por dígito con actualización en vivo
-            const prod1 = u_top * bottom;
-            const u_res = prod1 % 10;
-            const carry1 = Math.floor(prod1 / 10);
-            const prod2 = (d_top * bottom) + carry1;
-
-            const steps = [
-              {
-                stepType: 'mul_units',
-                instruction: `Multiplica las Unidades: ${u_top} × ${bottom}`,
-                desc: carry1 > 0
-                  ? `Calcula ${u_top} × ${bottom} = ${prod1}. Puedes escribir ${u_res} (el dígito que se queda abajo) o ${prod1}. El acarreo de +${carry1} subirá automáticamente a las decenas.`
-                  : `Calcula ${u_top} × ${bottom} y escribe el resultado para colocarlo en las unidades.`,
-                expected: u_res,
-                altExpected: prod1,
-                badge: `${u_top} × ${bottom}`,
-                hint: `${u_top} × ${bottom} = ${prod1}. Pon ${u_res} para colocar las unidades.`
-              },
-              {
-                stepType: 'mul_tens',
-                instruction: carry1 > 0
-                  ? `Decenas con acarreo: (${d_top} × ${bottom}) + ${carry1}`
-                  : `Multiplica las Decenas: ${d_top} × ${bottom}`,
-                desc: carry1 > 0
-                  ? `Multiplica ${d_top} × ${bottom} = ${d_top * bottom}, y súmale el +${carry1} que llevabas arriba.`
-                  : `Calcula ${d_top} × ${bottom} para completar el resultado de las decenas.`,
-                expected: prod2,
-                badge: carry1 > 0 ? `(${d_top} × ${bottom}) + ${carry1}` : `${d_top} × ${bottom}`,
-                hint: `Multiplica ${d_top} × ${bottom} = ${d_top * bottom}, más ${carry1} de acarreo = ${prod2}.`
-              }
-            ];
-
-            return {
-              topic,
-              mode: '1digit',
-              top,
-              bottom,
-              u_top,
-              d_top,
-              prod1,
-              u_res,
-              carry1,
-              prod2,
-              finalProduct: top * bottom,
-              steps
-            };
-          } else {
-            // Nivel Reto: Multiplicación de 2 cifras con productos parciales y suma final
-            const u_bot = bottom % 10;
-            const d_bot = Math.floor(bottom / 10);
-            const partial1 = top * u_bot;
-            const partial2 = top * d_bot;
-            const finalProduct = top * bottom;
-
-            const steps = [
-              {
-                stepType: 'partial_1',
-                instruction: `1er Renglón Parcial: ${top} × ${u_bot} (Unidades)`,
-                desc: `Multiplica todo el número superior (${top}) por la cifra de las unidades (${u_bot}).`,
-                expected: partial1,
-                badge: `${top} × ${u_bot}`,
-                hint: `Multiplica ${top} × ${u_bot} = ${partial1}.`
-              },
-              {
-                stepType: 'partial_2',
-                instruction: `2do Renglón Parcial: ${top} × ${d_bot} (Decenas)`,
-                desc: `Multiplica el número superior (${top}) por las decenas (${d_bot}). Se escribirá desplazado un espacio a la izquierda.`,
-                expected: partial2,
-                badge: `${top} × ${d_bot}`,
-                hint: `Multiplica ${top} × ${d_bot} = ${partial2}.`
-              },
-              {
-                stepType: 'sum_partials',
-                instruction: `Suma de Columnas: ${partial1} + ${partial2 * 10}`,
-                desc: `Suma el primer renglón (${partial1}) más el segundo renglón desplazado (${partial2}0) para obtener el resultado definitivo.`,
-                expected: finalProduct,
-                badge: `${partial1} + ${partial2 * 10}`,
-                hint: `Suma ${partial1} + ${partial2 * 10} = ${finalProduct}.`
-              }
-            ];
-
-            return {
-              topic,
-              mode: '2digits',
-              top,
-              bottom,
-              u_bot,
-              d_bot,
-              partial1,
-              partial2,
-              finalProduct,
-              steps
-            };
-          }
-        }
-
-        case 'col_div': {
-          let divisor, q1, q2;
-          if (difficulty === 'facil') {
-            divisor = getRandomInt(2, 5);
-            q1 = getRandomInt(1, 4);
-            q2 = getRandomInt(1, 5);
-          } else if (difficulty === 'medio') {
-            divisor = getRandomInt(4, 8);
-            q1 = getRandomInt(2, 6);
-            q2 = getRandomInt(2, 8);
-          } else {
-            divisor = getRandomInt(11, 18);
-            q1 = getRandomInt(2, 5);
-            q2 = getRandomInt(2, 7);
-          }
-
-          const quotient = q1 * 10 + q2;
-          const dividend = divisor * quotient;
-          const divStr = String(dividend);
-
-          // Separar el dividendo en la primera parte que cabe y el último dígito que baja
-          const lastDigit = dividend % 10;
-          const firstPart = Math.floor(dividend / 10);
-          const sub1 = q1 * divisor;
-          const rem1 = firstPart - sub1;
-          const secondPart = rem1 * 10 + lastDigit;
-          const sub2 = q2 * divisor;
-          const rem2 = secondPart - sub2;
-
-          const steps = [
-            {
-              instruction: `Primera cifra del cociente: ¿Cuántas veces cabe ${divisor} en ${firstPart}?`,
-              desc: `Observa las primeras cifras del dividendo (${firstPart}). Calcula cuántas veces cabe ${divisor} en ${firstPart} sin pasarse.`,
-              expected: q1,
-              badge: `${firstPart} ÷ ${divisor}`,
-              hint: `${divisor} × ${q1} = ${sub1}, así que cabe ${q1} veces.`
-            },
-            {
-              instruction: `Multiplica y resta: ¿Cuánto sobra de ${firstPart} - (${q1} × ${divisor})?`,
-              desc: `Multiplica ${q1} × ${divisor} = ${sub1} y réstalo a ${firstPart}. Al acertar, bajaremos automáticamente el ${lastDigit}.`,
-              expected: rem1,
-              badge: `${firstPart} - ${sub1}`,
-              hint: `Resta ${firstPart} menos ${sub1} = ${rem1}.`
-            },
-            {
-              instruction: `Segunda cifra del cociente: Bajamos el ${lastDigit} formando ${secondPart}`,
-              desc: `Con el nuevo número formado (${secondPart}), ¿cuántas veces cabe ${divisor} en ${secondPart}?`,
-              expected: q2,
-              badge: `${secondPart} ÷ ${divisor}`,
-              hint: `Divide ${secondPart} ÷ ${divisor} = ${q2}.`
-            },
-            {
-              instruction: `Residuo final: Resta ${secondPart} - (${q2} × ${divisor})`,
-              desc: `Multiplica ${q2} × ${divisor} = ${sub2} y réstalo de ${secondPart} para cerrar la división.`,
-              expected: rem2,
-              badge: `${secondPart} - ${sub2}`,
-              hint: `${secondPart} - ${sub2} = ${rem2}.`
-            }
-          ];
-
-          return {
-            topic,
-            divisor,
-            dividend,
-            quotient,
-            firstPart,
-            lastDigit,
-            q1,
-            sub1,
-            rem1,
-            secondPart,
-            q2,
-            sub2,
-            rem2,
-            steps
-          };
-        }
-
-        case 'primes': {
-          let num;
-          if (difficulty === 'facil') num = [12, 18, 20, 24, 28, 30][getRandomInt(0, 5)];
-          else if (difficulty === 'medio') num = [36, 42, 45, 48, 54, 60, 72][getRandomInt(0, 6)];
-          else num = [84, 90, 108, 120, 126, 140, 150][getRandomInt(0, 6)];
-
-          const factors = getPrimeFactors(num);
-          const steps = [];
-          const rows = [];
-          let temp = num;
-
-          factors.forEach((f, i) => {
-            const nextVal = Math.floor(temp / f);
-            rows.push({ left: temp, factor: f, nextLeft: nextVal });
-            steps.push({
-              instruction: `Factor primo para ${temp}`,
-              desc: `Encuentra el menor número primo (2, 3, 5, 7...) que divida exactamente a ${temp}.`,
-              expected: f,
-              badge: `Primo ÷ ${temp}`,
-              rowIndex: i,
-              stepType: 'factor',
-              hint: `El menor número primo que divide a ${temp} sin dejar residuo es ${f}.`
+        // --- 2. GESTIÓN DE USUARIOS (Login/Registro) ---
+        function selectAvatar(el, avatar) {
+            selectedAvatar = avatar;
+            document.querySelectorAll('#avatarSelector div').forEach(d => {
+                d.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100';
             });
-            steps.push({
-              instruction: `Divide ${temp} ÷ ${f}`,
-              desc: `Escribe el resultado de dividir ${temp} entre el factor primo ${f} para colocarlo debajo en la escalera.`,
-              expected: nextVal,
-              badge: `${temp} ÷ ${f}`,
-              rowIndex: i,
-              stepType: 'quotient',
-              hint: `${temp} dividido entre ${f} es igual a ${nextVal}.`
-            });
-            temp = nextVal;
-          });
-
-          return { topic, initialNum: num, factors, rows, steps };
+            el.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-indigo-100 border-2 border-indigo-500';
         }
 
-        case 'mcd': {
-          let a, b;
-          if (difficulty === 'facil') {
-            const pairs = [[12, 18], [16, 24], [15, 25], [14, 21], [20, 30]];
-            [a, b] = pairs[getRandomInt(0, pairs.length - 1)];
-          } else if (difficulty === 'medio') {
-            const pairs = [[24, 36], [28, 42], [30, 45], [32, 48], [36, 60]];
-            [a, b] = pairs[getRandomInt(0, pairs.length - 1)];
-          } else {
-            const pairs = [[48, 72], [54, 90], [60, 84], [75, 105], [64, 96]];
-            [a, b] = pairs[getRandomInt(0, pairs.length - 1)];
-          }
-
-          // Construir tabla de divisores primos comunes paso a paso
-          const ladder = [];
-          let curA = a, curB = b;
-          let p = 2;
-          while (p <= Math.min(curA, curB)) {
-            if (curA % p === 0 && curB % p === 0) {
-              const nextA = curA / p;
-              const nextB = curB / p;
-              ladder.push({ a: curA, b: curB, factor: p, nextA, nextB });
-              curA = nextA;
-              curB = nextB;
+        document.getElementById('expedienteInput').addEventListener('input', function(e) {
+            const val = e.target.value;
+            const regForm = document.getElementById('registerForm');
+            const btn = document.getElementById('authBtn');
+            
+            // Simular búsqueda local rápida para mostrar u ocultar registro
+            const isLocalKnown = localStorage.getItem('math_student_' + val) !== null;
+            
+            if (val.length === 8 && !isLocalKnown) {
+                regForm.classList.remove('hidden');
+                btn.innerText = 'Registrar y Guardar en la Nube';
             } else {
-              p++;
+                regForm.classList.add('hidden');
+                btn.innerText = 'Ingresar a la Nube';
             }
-          }
+        });
 
-          const resMCD = gcd(a, b);
-          const steps = [];
+        async function handleAuthSubmit() {
+            const exp = document.getElementById('expedienteInput').value.trim();
+            if (exp.length !== 8) { alert("El expediente debe tener 8 dígitos."); return; }
 
-          ladder.forEach((row, idx) => {
-            steps.push({
-              instruction: `Divisor primo común de ${row.a} y ${row.b}`,
-              desc: `¿Cuál es el menor número primo que divide exactamente tanto a ${row.a} como a ${row.b}?`,
-              expected: row.factor,
-              badge: `Divide a ${row.a} y ${row.b}`,
-              hint: `Tanto ${row.a} como ${row.b} se pueden dividir entre ${row.factor}.`
+            const btn = document.getElementById('authBtn');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>';
+            lucide.createIcons();
+
+            let savedData = null;
+            if (window.cloudDB) savedData = await window.cloudDB.loadProgress(exp);
+            if (!savedData) savedData = JSON.parse(localStorage.getItem('math_student_' + exp));
+
+            if (savedData) {
+                studentData = savedData;
+            } else {
+                studentData = {
+                    expediente: exp,
+                    apPaterno: document.getElementById('apPaternoInput').value.trim(),
+                    apMaterno: document.getElementById('apMaternoInput').value.trim(),
+                    nombre: document.getElementById('nombreInput').value.trim(),
+                    grupo: document.getElementById('grupoInput').value.trim(),
+                    avatar: selectedAvatar,
+                    puntos: 0, racha: 0, resueltos: 0, stats: {}
+                };
+            }
+
+            document.getElementById('loginModal').classList.add('hidden');
+            actualizarUIEstudiante();
+            initProblem();
+        }
+
+        function cerrarSesion() {
+            document.getElementById('loginModal').classList.remove('hidden');
+            document.getElementById('expedienteInput').value = '';
+            document.getElementById('registerForm').classList.add('hidden');
+        }
+
+        function guardarProgreso() {
+            localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(studentData));
+            if (window.cloudDB) window.cloudDB.saveProgress(studentData.expediente, studentData);
+        }
+
+        function actualizarUIEstudiante() {
+            document.getElementById('userNameDisplay').innerText = studentData.nombre || studentData.expediente;
+            document.getElementById('userAvatarDisplay').innerText = studentData.avatar || '🧑‍🎓';
+            document.getElementById('totalPoints').innerText = studentData.puntos + ' pts';
+            document.getElementById('streakCount').innerText = studentData.racha;
+        }
+
+        // --- 3. UI Y NAVEGACIÓN ---
+        function setDifficulty(diff) {
+            currentState.difficulty = diff;
+            const bg = document.getElementById('diffBgSelector');
+            const btnFacil = document.getElementById('diff-facil');
+            const btnMedio = document.getElementById('diff-medio');
+            const btnReto = document.getElementById('diff-reto');
+
+            btnFacil.className = 'flex-1 py-2 text-sm font-bold z-10 transition-colors text-slate-500';
+            btnMedio.className = 'flex-1 py-2 text-sm font-bold z-10 transition-colors text-slate-500';
+            btnReto.className = 'flex-1 py-2 text-sm font-bold z-10 transition-colors text-slate-500';
+
+            if(diff === 'facil') {
+                bg.style.left = '1.5%'; bg.style.width = '31%';
+                bg.className = 'absolute top-1.5 bottom-1.5 bg-green-100 border-2 border-green-200 rounded-xl transition-all duration-300 z-0';
+                btnFacil.classList.replace('text-slate-500', 'text-green-700');
+            } else if (diff === 'medio') {
+                bg.style.left = '34%'; bg.style.width = '32%';
+                bg.className = 'absolute top-1.5 bottom-1.5 bg-amber-100 border-2 border-amber-200 rounded-xl transition-all duration-300 z-0';
+                btnMedio.classList.replace('text-slate-500', 'text-amber-700');
+            } else {
+                bg.style.left = '67.5%'; bg.style.width = '31%';
+                bg.className = 'absolute top-1.5 bottom-1.5 bg-rose-100 border-2 border-rose-200 rounded-xl transition-all duration-300 z-0';
+                btnReto.classList.replace('text-slate-500', 'text-rose-700');
+            }
+            updateHeaderUI();
+            initProblem();
+        }
+
+        function setTopic(topic) {
+            currentState.topic = topic;
+            document.querySelectorAll('.menu-btn').forEach(btn => {
+                btn.className = 'menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left text-slate-600 hover:bg-slate-50';
+                let iconDiv = btn.querySelector('.icon-bg');
+                if(iconDiv) iconDiv.className = 'icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-500';
             });
-            steps.push({
-              instruction: `Divide ${row.a} ÷ ${row.factor} (y se actualizará ${row.b} ÷ ${row.factor} = ${row.nextB})`,
-              desc: `Calcula ${row.a} ÷ ${row.factor} para avanzar a la siguiente fila de la tabla MCD.`,
-              expected: row.nextA,
-              badge: `${row.a} ÷ ${row.factor}`,
-              hint: `Divide ${row.a} entre ${row.factor} = ${row.nextA}.`
-            });
-          });
-
-          steps.push({
-            instruction: `Multiplica los factores comunes: ${ladder.map(r => r.factor).join(' × ')}`,
-            desc: `Ya no hay más divisores comunes para ${curA} y ${curB}. Multiplica todos los factores primos de la derecha para obtener el MCD.`,
-            expected: resMCD,
-            badge: `MCD(${a}, ${b})`,
-            hint: `El producto de ${ladder.map(r => r.factor).join(' × ')} es ${resMCD}.`
-          });
-
-          return { topic, a, b, ladder, curA, curB, resMCD, steps };
-        }
-
-        case 'mcm': {
-          let a, b;
-          if (difficulty === 'facil') {
-            const pairs = [[4, 6], [6, 9], [8, 12], [5, 10], [6, 8]];
-            [a, b] = pairs[getRandomInt(0, pairs.length - 1)];
-          } else if (difficulty === 'medio') {
-            const pairs = [[8, 10], [9, 12], [10, 15], [12, 16], [14, 21]];
-            [a, b] = pairs[getRandomInt(0, pairs.length - 1)];
-          } else {
-            const pairs = [[12, 15], [16, 20], [18, 24], [15, 25], [20, 28]];
-            [a, b] = pairs[getRandomInt(0, pairs.length - 1)];
-          }
-
-          const divMCD = gcd(a, b);
-          const prodAB = a * b;
-          const resMCM = lcm(a, b);
-
-          const steps = [
-            {
-              instruction: `Paso 1: Encuentra el MCD de ${a} y ${b}`,
-              desc: `Primero identifica el Máximo Común Divisor que divide a ${a} y ${b} exactamente.`,
-              expected: divMCD,
-              badge: `MCD(${a}, ${b})`,
-              hint: `El mayor número que divide a ${a} y a ${b} es ${divMCD}.`
-            },
-            {
-              instruction: `Paso 2: Multiplica ambos números (${a} × ${b})`,
-              desc: `Calcula el producto directo de ${a} por ${b}.`,
-              expected: prodAB,
-              badge: `${a} × ${b}`,
-              hint: `Multiplica ${a} × ${b} = ${prodAB}.`
-            },
-            {
-              instruction: `Paso 3: Divide el producto (${prodAB}) entre el MCD (${divMCD})`,
-              desc: `Divide ${prodAB} ÷ ${divMCD} para obtener el Mínimo Común Múltiplo (mcm).`,
-              expected: resMCM,
-              badge: `${prodAB} ÷ ${divMCD}`,
-              hint: `${prodAB} dividido entre ${divMCD} da ${resMCM}.`
+            
+            const activeBtn = document.getElementById('btn-' + topic);
+            if(activeBtn) {
+                activeBtn.className = 'menu-btn active w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left bg-indigo-600 text-white shadow-md shadow-indigo-200';
+                let iconDiv = activeBtn.querySelector('.icon-bg');
+                if(iconDiv) iconDiv.className = 'icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 text-white';
             }
-          ];
-
-          return { topic, a, b, divMCD, prodAB, resMCM, steps };
+            updateHeaderUI();
+            initProblem();
         }
 
-        case 'frac_eq': {
-          let num, den, scale;
-          if (difficulty === 'facil') {
-            num = getRandomInt(1, 4);
-            den = getRandomInt(num + 1, 6);
-            scale = getRandomInt(2, 3);
-          } else if (difficulty === 'medio') {
-            num = getRandomInt(2, 7);
-            den = getRandomInt(num + 1, 9);
-            scale = getRandomInt(4, 6);
-          } else {
-            num = getRandomInt(3, 11);
-            den = getRandomInt(num + 1, 14);
-            scale = getRandomInt(7, 11);
-          }
-
-          const missingNum = num * scale;
-          const missingDen = den * scale;
-
-          const steps = [
-            {
-              instruction: `Descubre el factor de amplificación (${den} × ? = ${missingDen})`,
-              desc: `Observa los denominadores: ¿Por qué número se multiplicó ${den} para convertirse en ${missingDen}?`,
-              expected: scale,
-              badge: `${missingDen} ÷ ${den}`,
-              hint: `Divide ${missingDen} entre ${den} = ${scale}.`
-            },
-            {
-              instruction: `Amplifica el numerador: Multiplica ${num} × ${scale}`,
-              desc: `Para que la fracción sea equivalente, multiplica el numerador superior (${num}) por el mismo factor (${scale}).`,
-              expected: missingNum,
-              badge: `${num} × ${scale}`,
-              hint: `Multiplica ${num} por ${scale} = ${missingNum}.`
-            }
-          ];
-
-          return { topic, num, den, scale, missingNum, missingDen, steps };
+        function updateHeaderUI() {
+            let pts = currentState.difficulty === 'facil' ? '+1 pt' : (currentState.difficulty === 'medio' ? '+2 pts' : '+3 pts');
+            let badge = document.getElementById('currentDiffBadge');
+            badge.innerText = `${currentState.difficulty.toUpperCase()} ${pts}`;
+            
+            if(currentState.difficulty === 'facil') badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-green-100 text-green-800 uppercase tracking-wide border border-green-200';
+            if(currentState.difficulty === 'medio') badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 uppercase tracking-wide border border-amber-200';
+            if(currentState.difficulty === 'reto') badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 uppercase tracking-wide border border-rose-200';
         }
 
-        case 'frac_add': {
-          let n1, d1, n2, d2;
-          if (difficulty === 'facil') {
-            const list = [[1, 2, 1, 4], [1, 3, 1, 6], [1, 2, 1, 3], [2, 3, 1, 6]];
-            [n1, d1, n2, d2] = list[getRandomInt(0, list.length - 1)];
-          } else if (difficulty === 'medio') {
-            const list = [[2, 3, 3, 4], [3, 5, 1, 2], [2, 5, 3, 10], [3, 4, 1, 6]];
-            [n1, d1, n2, d2] = list[getRandomInt(0, list.length - 1)];
-          } else {
-            const list = [[5, 6, 3, 8], [4, 9, 5, 6], [7, 10, 3, 4], [5, 8, 7, 12]];
-            [n1, d1, n2, d2] = list[getRandomInt(0, list.length - 1)];
-          }
+        // --- 4. MOTORES DE GENERACIÓN MATEMÁTICA ---
+        const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+        const primes = [2, 3, 5, 7, 11, 13, 17, 19];
+        const mcdCalc = (a, b) => b === 0 ? a : mcdCalc(b, a % b);
 
-          const comDen = lcm(d1, d2);
-          const newN1 = n1 * (comDen / d1);
-          const newN2 = n2 * (comDen / d2);
-          const sumN = newN1 + newN2;
+        function initProblem() {
+            document.getElementById('successMessage').classList.add('hidden');
+            document.getElementById('inputContainer').classList.remove('hidden');
+            const input = document.getElementById('answerInput');
+            input.value = ''; input.disabled = false; input.focus();
 
-          const steps = [
-            {
-              instruction: `Paso 1: Común denominador (mcm de ${d1} y ${d2})`,
-              desc: `Encuentra el mínimo común múltiplo de los denominadores ${d1} y ${d2}.`,
-              expected: comDen,
-              badge: `mcm(${d1}, ${d2})`,
-              hint: `El menor múltiplo común de ${d1} y ${d2} es ${comDen}.`
-            },
-            {
-              instruction: `Paso 2: Convierte el primer numerador (${n1}/${d1} → ?/${comDen})`,
-              desc: `Divide ${comDen} ÷ ${d1} = ${comDen / d1} y multiplícalo por el numerador ${n1}.`,
-              expected: newN1,
-              badge: `${n1} × (${comDen}÷${d1})`,
-              hint: `Multiplica ${n1} × ${comDen / d1} = ${newN1}.`
-            },
-            {
-              instruction: `Paso 3: Convierte el segundo numerador (${n2}/${d2} → ?/${comDen})`,
-              desc: `Divide ${comDen} ÷ ${d2} = ${comDen / d2} y multiplícalo por el numerador ${n2}.`,
-              expected: newN2,
-              badge: `${n2} × (${comDen}÷${d2})`,
-              hint: `Multiplica ${n2} × ${comDen / d2} = ${newN2}.`
-            },
-            {
-              instruction: `Paso 4: Suma los numeradores convertidos (${newN1} + ${newN2})`,
-              desc: `Suma ${newN1} + ${newN2} para obtener el numerador final sobre ${comDen}.`,
-              expected: sumN,
-              badge: `${newN1} + ${newN2}`,
-              hint: `Suma ${newN1} más ${newN2} = ${sumN}.`
-            }
-          ];
-
-          return { topic, n1, d1, n2, d2, comDen, newN1, newN2, sumN, steps };
+            currentState.stepIndex = 0;
+            currentState.steps = [];
+            currentState.data = {};
+            
+            if(currentState.topic === 'col_mul') genColMul();
+            else if(currentState.topic === 'col_div') genColDiv();
+            else if(currentState.topic === 'primos') genPrimos();
+            else if(currentState.topic === 'mcd') genMCD();
+            else if(currentState.topic === 'mcm') genMCM();
+            else if(currentState.topic.startsWith('frac_')) genFracciones();
+            
+            renderStep();
         }
 
-        case 'frac_mul': {
-          let n1, d1, n2, d2;
-          if (difficulty === 'facil') {
-            n1 = getRandomInt(1, 4); d1 = getRandomInt(2, 5);
-            n2 = getRandomInt(1, 4); d2 = getRandomInt(2, 5);
-          } else if (difficulty === 'medio') {
-            n1 = getRandomInt(3, 7); d1 = getRandomInt(4, 8);
-            n2 = getRandomInt(2, 6); d2 = getRandomInt(3, 7);
-          } else {
-            n1 = getRandomInt(5, 11); d1 = getRandomInt(6, 12);
-            n2 = getRandomInt(4, 9); d2 = getRandomInt(5, 11);
-          }
+        // --- A. MULTIPLICACIÓN: Dígito por Dígito con acarreos ---
+        function genColMul() {
+            let n1 = currentState.difficulty === 'facil' ? rand(12, 99) : rand(100, 999);
+            let n2 = currentState.difficulty === 'reto' ? rand(12, 99) : rand(2, 9);
+            
+            let s1 = n1.toString(), s2 = n2.toString();
+            let steps = [];
+            
+            currentState.data = { n1: s1, n2: s2, rows: [], finalAns: [], carries: Array(s1.length+1).fill(0) };
 
-          const finalN = n1 * n2;
-          const finalD = d1 * d2;
-          const commonDiv = gcd(finalN, finalD);
-          const simpN = finalN / commonDiv;
-          const simpD = finalD / commonDiv;
-
-          const steps = [
-            {
-              instruction: `Multiplica los numeradores en línea recta: ${n1} × ${n2}`,
-              desc: `Multiplica directamente el numerador izquierdo (${n1}) por el numerador derecho (${n2}).`,
-              expected: finalN,
-              badge: `${n1} × ${n2}`,
-              hint: `Calcula ${n1} × ${n2} = ${finalN}.`
-            },
-            {
-              instruction: `Multiplica los denominadores en línea recta: ${d1} × ${d2}`,
-              desc: `Multiplica directamente el denominador izquierdo (${d1}) por el denominador derecho (${d2}).`,
-              expected: finalD,
-              badge: `${d1} × ${d2}`,
-              hint: `Calcula ${d1} × ${d2} = ${finalD}.`
-            }
-          ];
-
-          if (commonDiv > 1 && difficulty !== 'facil') {
-            steps.push({
-              instruction: `Simplifica la fracción (${finalN}/${finalD}) dividiendo entre ${commonDiv}`,
-              desc: `Divide el numerador ${finalN} ÷ ${commonDiv} para dejar la fracción simplificada (${simpN}/${simpD}).`,
-              expected: simpN,
-              badge: `${finalN} ÷ ${commonDiv}`,
-              hint: `Divide ${finalN} entre ${commonDiv} = ${simpN}.`
-            });
-          }
-
-          return { topic, n1, d1, n2, d2, finalN, finalD, commonDiv, simpN, simpD, steps };
-        }
-
-        case 'frac_div': {
-          let n1, d1, n2, d2;
-          if (difficulty === 'facil') {
-            n1 = getRandomInt(1, 4); d1 = getRandomInt(2, 5);
-            n2 = getRandomInt(1, 4); d2 = getRandomInt(2, 5);
-          } else if (difficulty === 'medio') {
-            n1 = getRandomInt(3, 7); d1 = getRandomInt(4, 8);
-            n2 = getRandomInt(2, 6); d2 = getRandomInt(3, 7);
-          } else {
-            n1 = getRandomInt(5, 11); d1 = getRandomInt(4, 9);
-            n2 = getRandomInt(3, 8); d2 = getRandomInt(5, 12);
-          }
-
-          const crossN = n1 * d2;
-          const crossD = d1 * n2;
-
-          const steps = [
-            {
-              instruction: `Producto Cruzado Superior: ${n1} × ${d2}`,
-              desc: `Multiplica el primer numerador (${n1}) por el segundo denominador (${d2}) y el resultado sube al nuevo numerador.`,
-              expected: crossN,
-              badge: `${n1} × ${d2}`,
-              hint: `Multiplica ${n1} × ${d2} = ${crossN}.`
-            },
-            {
-              instruction: `Producto Cruzado Inferior: ${d1} × ${n2}`,
-              desc: `Multiplica el primer denominador (${d1}) por el segundo numerador (${n2}) y el resultado baja al nuevo denominador.`,
-              expected: crossD,
-              badge: `${d1} × ${n2}`,
-              hint: `Multiplica ${d1} × ${n2} = ${crossD}.`
-            }
-          ];
-
-          return { topic, n1, d1, n2, d2, crossN, crossD, steps };
-        }
-
-        default:
-          return null;
-      }
-    }
-
-    /* ==============================================================
-       5. RENDERIZADOR VISUAL PASO A PASO EN VIVO
-          Actualiza inmediatamente la pantalla tras cada paso resuelto
-       ============================================================== */
-    function renderMathCanvas() {
-      const canvas = document.getElementById('mathCanvas');
-      if (!canvas || !currentProblem) return;
-
-      const p = currentProblem;
-      const idx = currentStepIndex;
-      let html = '';
-
-      switch (p.topic) {
-        case 'col_mul': {
-          if (p.mode === '1digit') {
-            const unitDone = idx >= 1;
-            const decDone = idx >= 2;
-            const showCarry = unitDone && p.carry1 > 0;
-
-            html = `
-              <div class="flex flex-col items-center">
-                <!-- Indicador de estado de la columna -->
-                <div class="mb-3 px-3 py-1 rounded-full text-xs font-fredoka font-bold flex items-center gap-1.5 ${
-                  decDone 
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                    : (unitDone ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-indigo-100 text-indigo-800 border border-indigo-200')
-                }">
-                  <span>${decDone ? '🎉 ¡Multiplicación completa!' : (unitDone ? '✨ Unidades listas. Ahora resuelve decenas' : '👉 Paso 1: Resuelve la columna de unidades')}</span>
-                </div>
-
-                <div class="flex flex-col items-end font-mono text-3xl sm:text-4xl font-bold tracking-widest text-slate-800 space-y-2 bg-slate-50/90 px-8 py-6 rounded-3xl border border-slate-200 shadow-inner min-w-[240px]">
-                  
-                  <!-- Fila de Acarreo Dinámico con animación -->
-                  <div class="h-9 flex items-center justify-end w-full pr-14">
-                    ${showCarry
-                      ? `<div class="flex items-center gap-1 px-3 py-1 rounded-xl bg-amber-200 border-2 border-amber-400 text-amber-900 text-xs sm:text-sm font-extrabold animate-pop-in shadow-xs" title="Llevamos ${p.carry1}">
-                          <span class="animate-bounce">⬆️</span> Llevamos +${p.carry1}
-                        </div>`
-                      : (unitDone ? `<span class="text-xs text-slate-400 font-fredoka font-medium">Sin acarreo</span>` : `<span class="text-xs text-slate-300 font-fredoka font-normal">Acarreo</span>`)}
-                  </div>
-
-                  <!-- Multiplicando Superior -->
-                  <div class="flex items-center justify-end w-full pr-2">
-                    <span class="px-2 transition-colors ${idx === 1 ? 'text-indigo-600 bg-indigo-50 rounded-lg' : ''}">${p.d_top}</span>
-                    <span class="px-2 transition-colors ${idx === 0 ? 'text-indigo-600 bg-indigo-50 rounded-lg' : ''}">${p.u_top}</span>
-                  </div>
-
-                  <!-- Multiplicador Inferior -->
-                  <div class="flex items-center justify-between border-b-4 border-slate-800 pb-2 w-full pr-2">
-                    <span class="text-indigo-600 font-extrabold text-3xl">×</span>
-                    <span class="px-2 text-indigo-950">${p.bottom}</span>
-                  </div>
-
-                  <!-- Casillas Dinámicas de Resultado Paso a Paso -->
-                  <div class="flex items-center justify-end gap-2.5 pt-2 pr-0 w-full">
-                    <!-- Columna de Decenas / Centenas -->
-                    <div class="min-w-[4rem] px-2 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
-                      idx === 1
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-md ring-4 ring-indigo-200'
-                        : (decDone ? 'bg-emerald-100 border-emerald-500 text-emerald-800 animate-pop-in shadow-sm font-extrabold' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${decDone ? p.prod2 : (idx === 1 ? '?' : '·')}
-                    </div>
-
-                    <!-- Columna de Unidades -->
-                    <div class="w-16 h-16 rounded-2xl flex items-center justify-center border-2 transition-all ${
-                      idx === 0
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-md ring-4 ring-indigo-200'
-                        : (unitDone ? 'bg-emerald-100 border-emerald-500 text-emerald-800 animate-pop-in shadow-sm font-extrabold' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${unitDone ? p.u_res : '?'}
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Detalle explicativo al pie de la operación -->
-                <div class="mt-3 text-xs font-fredoka text-slate-500 text-center">
-                  ${unitDone 
-                    ? `<span class="text-emerald-700 font-bold">✓ Unidades resueltas: ${p.u_top} × ${p.bottom} = ${p.prod1} (colocamos ${p.u_res}${p.carry1 > 0 ? ` y sube +${p.carry1}` : ''})</span>` 
-                    : `Multiplica ${p.u_top} × ${p.bottom} y escribe el dígito de las unidades.`}
-                </div>
-              </div>
-            `;
-          } else {
-            // Multiplicación de 2 cifras (Reto) con renglones parciales actualizables
-            const row1Done = idx >= 1;
-            const row2Done = idx >= 2;
-            const sumDone = idx >= 3;
-
-            html = `
-              <div class="flex flex-col items-center">
-                <div class="mb-3 px-3.5 py-1 rounded-full text-xs font-fredoka font-bold ${
-                  sumDone 
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' 
-                    : (row2Done ? 'bg-amber-100 text-amber-800 border border-amber-300' : 'bg-indigo-100 text-indigo-800 border border-indigo-200')
-                }">
-                  ${sumDone 
-                    ? '🎉 ¡Operación de dos cifras completada con éxito!' 
-                    : (row2Done 
-                        ? '👉 Paso 3: Suma las dos filas parciales' 
-                        : (row1Done ? '👉 Paso 2: Multiplica por las decenas (segundo renglón)' : '👉 Paso 1: Multiplica por las unidades (primer renglón)'))}
-                </div>
-
-                <div class="flex flex-col items-end font-mono text-2xl sm:text-3xl font-bold text-slate-800 space-y-2 bg-slate-50/90 px-8 py-6 rounded-3xl border border-slate-200 shadow-inner min-w-[280px]">
-                  <div class="pr-2 tracking-widest text-slate-900">${p.top}</div>
-                  <div class="flex items-center justify-between w-full border-b-4 border-slate-800 pb-1.5 pr-2">
-                    <span class="text-indigo-600 font-extrabold">×</span>
-                    <div class="flex items-center tracking-widest">
-                      <span class="${idx === 1 ? 'text-indigo-600 font-extrabold bg-indigo-50 px-1 rounded' : ''}">${p.d_bot}</span>
-                      <span class="${idx === 0 ? 'text-indigo-600 font-extrabold bg-indigo-50 px-1 rounded' : ''}">${p.u_bot}</span>
-                    </div>
-                  </div>
-
-                  <!-- 1er Renglón Parcial (top × unidades) -->
-                  <div class="w-full flex items-center justify-between gap-4 pt-1">
-                    <span class="text-[11px] font-fredoka text-slate-400">(${p.top} × ${p.u_bot})</span>
-                    <div class="min-w-[120px] h-11 px-3 rounded-xl flex items-center justify-end border-2 transition-all ${
-                      idx === 0
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
-                        : (row1Done ? 'bg-emerald-100 border-emerald-500 text-emerald-800 font-extrabold animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${row1Done ? p.partial1 : '?'}
-                    </div>
-                  </div>
-
-                  <!-- 2do Renglón Parcial desplazado (top × decenas) -->
-                  <div class="w-full flex items-center justify-between gap-4 border-b-2 border-slate-400 pb-2">
-                    <span class="text-[11px] font-fredoka text-slate-400">+ (${p.top} × ${p.d_bot}0)</span>
-                    <div class="flex items-center">
-                      <div class="min-w-[105px] h-11 px-3 rounded-xl flex items-center justify-end border-2 transition-all ${
-                        idx === 1
-                          ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
-                          : (row2Done ? 'bg-emerald-100 border-emerald-500 text-emerald-800 font-extrabold animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
-                      }">
-                        ${row2Done ? p.partial2 : (idx === 1 ? '?' : '·')}
-                      </div>
-                      <span class="text-slate-400 pl-1.5 text-xl font-bold">0</span>
-                    </div>
-                  </div>
-
-                  <!-- Renglón de Suma Final -->
-                  <div class="w-full flex items-center justify-between gap-4 pt-1">
-                    <span class="text-xs font-fredoka font-bold text-indigo-600">Total =</span>
-                    <div class="min-w-[140px] h-12 px-4 rounded-2xl flex items-center justify-end border-2 transition-all ${
-                      idx === 2
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700 shadow-sm'
-                        : (sumDone ? 'bg-emerald-200 border-emerald-600 text-emerald-950 font-extrabold animate-pop-in' : 'border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${sumDone ? p.finalProduct : (idx === 2 ? '?' : '·')}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="mt-3 text-xs font-fredoka text-slate-500 text-center">
-                  ${row2Done 
-                    ? `<span class="text-emerald-700 font-bold">✓ Parciales listos: Suma ${p.partial1} + ${p.partial2 * 10} para terminar.</span>`
-                    : (row1Done ? `<span class="text-indigo-700 font-bold">✓ 1er renglón listo (${p.partial1}). Ahora calcula ${p.top} × ${p.d_bot}.</span>` : `Calcula ${p.top} × ${p.u_bot}.`)}
-                </div>
-              </div>
-            `;
-          }
-          break;
-        }
-
-        case 'col_div': {
-          const step0Done = idx >= 1;
-          const step1Done = idx >= 2;
-          const step2Done = idx >= 3;
-          const step3Done = idx >= 4;
-
-          html = `
-            <div class="flex flex-col items-center font-mono text-2xl sm:text-3xl font-bold text-slate-800 bg-slate-50/70 px-8 py-6 rounded-3xl border border-slate-200/80 shadow-inner">
-              <!-- Cociente Superior Dígito a Dígito -->
-              <div class="flex items-center justify-end gap-2 w-full pl-16 pr-3 mb-1.5">
-                <div class="w-12 h-12 rounded-xl flex items-center justify-center border-2 ${
-                  idx === 0
-                    ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                    : (step0Done ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                }">
-                  ${step0Done ? p.q1 : '?'}
-                </div>
-                <div class="w-12 h-12 rounded-xl flex items-center justify-center border-2 ${
-                  idx === 2
-                    ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                    : (step2Done ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                }">
-                  ${step2Done ? p.q2 : (idx === 2 ? '?' : '·')}
-                </div>
-              </div>
-
-              <!-- Casita y Dividendo -->
-              <div class="flex items-center">
-                <span class="px-4 py-2 text-indigo-700 text-3xl font-extrabold">${p.divisor}</span>
-                <div class="border-t-4 border-l-4 border-slate-800 rounded-tl-2xl px-6 py-2.5 bg-white shadow-2xs tracking-[0.25em] text-3xl text-slate-900">
-                  <span>${p.firstPart}</span><span class="${step1Done ? 'text-indigo-600 underline decoration-indigo-400' : ''}">${p.lastDigit}</span>
-                </div>
-              </div>
-
-              <!-- Primer Residuo + Bajada de cifra -->
-              <div class="flex flex-col items-start pl-16 mt-2 space-y-1.5 w-full">
-                ${step0Done ? `
-                  <div class="text-sm text-rose-500 font-bold pl-2 animate-pop-in">-${p.sub1}</div>
-                ` : ''}
-
-                <div class="flex items-center gap-1.5 pl-2">
-                  <!-- Casilla Primer Residuo -->
-                  <div class="w-12 h-11 rounded-xl flex items-center justify-center border-2 ${
-                    idx === 1
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (step1Done ? 'bg-emerald-50 border-emerald-400 text-emerald-800 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${step1Done ? p.rem1 : (idx === 1 ? '?' : '·')}
-                  </div>
-
-                  <!-- Dígito que baja automáticamente tras completar el paso 1 -->
-                  ${step1Done ? `
-                    <div class="w-11 h-11 rounded-xl bg-indigo-100 border-2 border-indigo-300 text-indigo-800 flex items-center justify-center animate-pop-in" title="Cifra bajada">
-                      ↓${p.lastDigit}
-                    </div>
-                  ` : ''}
-                </div>
-
-                <!-- Segundo Residuo Final -->
-                ${step2Done ? `
-                  <div class="text-sm text-rose-500 font-bold pl-4 animate-pop-in">-${p.sub2}</div>
-                  <div class="pl-4">
-                    <div class="w-14 h-11 rounded-xl flex items-center justify-center border-2 ${
-                      idx === 3
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (step3Done ? 'bg-emerald-100 border-emerald-500 text-emerald-900 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${step3Done ? p.rem2 : '?'}
-                    </div>
-                  </div>
-                ` : ''}
-              </div>
-            </div>
-          `;
-          break;
-        }
-
-        case 'primes': {
-          let rowsHtml = '';
-          p.rows.forEach((row, rIdx) => {
-            const factorStepIdx = rIdx * 2;
-            const quotStepIdx = rIdx * 2 + 1;
-
-            const showLeft = rIdx === 0 || idx >= factorStepIdx;
-            const factorSolved = idx > factorStepIdx;
-            const factorActive = idx === factorStepIdx;
-
-            if (showLeft) {
-              rowsHtml += `
-                <div class="grid grid-cols-2 items-center gap-6 py-1.5">
-                  <div class="text-right pr-4 font-extrabold text-2xl sm:text-3xl ${rIdx === 0 ? 'text-indigo-950' : 'text-emerald-700 animate-pop-in'}">
-                    ${row.left}
-                  </div>
-                  <div class="pl-4 border-l-4 border-slate-800 flex items-center">
-                    <div class="w-14 h-11 rounded-xl flex items-center justify-center border-2 text-xl font-bold ${
-                      factorActive
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (factorSolved ? 'bg-amber-100 border-amber-400 text-amber-900 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${factorSolved ? row.factor : (factorActive ? '?' : '·')}
-                    </div>
-                  </div>
-                </div>
-              `;
+            for (let j = s2.length - 1; j >= 0; j--) {
+                let multiplier = parseInt(s2[j]);
+                let rowAns = Array(s1.length + (s2.length-1-j)).fill(''); // zeros de desplazamiento invisibles al inicio
+                let carry = 0;
+                
+                for(let i = s1.length - 1; i >= 0; i--) {
+                    let topDigit = parseInt(s1[i]);
+                    let prod = (topDigit * multiplier) + carry;
+                    let digitToPlace = prod % 10;
+                    carry = Math.floor(prod / 10);
+                    
+                    steps.push({
+                        type: 'mul_digit', rowIdx: s2.length - 1 - j, colIdx: i,
+                        expected: digitToPlace, nextCarry: carry,
+                        msg: `Multiplica ${topDigit} × ${multiplier} ${currentState.data.carries[i+1]>0 ? '+ acarreo' : ''}. ¿Qué número va abajo?`
+                    });
+                }
+                if (carry > 0) {
+                    steps.push({ type: 'mul_digit', rowIdx: s2.length - 1 - j, colIdx: -1, expected: carry, nextCarry: 0, msg: `Coloca el acarreo final.` });
+                }
+                currentState.data.rows.push(rowAns);
             }
 
-            // Mostrar la casilla del cociente debajo cuando está activo o en el final (1)
-            const quotActive = idx === quotStepIdx;
-            const quotSolved = idx > quotStepIdx;
-            if (quotActive || (quotSolved && rIdx === p.rows.length - 1)) {
-              rowsHtml += `
-                <div class="grid grid-cols-2 items-center gap-6 py-1.5">
-                  <div class=" flex justify-end pr-4">
-                    <div class="w-16 h-11 rounded-xl flex items-center justify-center border-2 text-xl font-bold ${
-                      quotActive
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : 'bg-emerald-100 border-emerald-500 text-emerald-900 animate-pop-in'
-                    }">
-                      ${quotSolved ? row.nextLeft : '?'}
-                    </div>
-                  </div>
-                  <div class="pl-4 border-l-4 border-slate-800 h-11 flex items-center text-xs font-fredoka text-slate-400">
-                    ${quotSolved ? '¡Fin!' : `(${row.left} ÷ ${row.factor})`}
-                  </div>
-                </div>
-              `;
+            if (s2.length > 1) {
+                let finalRes = (n1 * n2).toString();
+                currentState.data.finalAns = Array(finalRes.length).fill('');
+                for(let i=finalRes.length-1; i>=0; i--) {
+                    steps.push({ type: 'add_final', colIdx: i, expected: parseInt(finalRes[i]), msg: `Suma las columnas. ¿Dígito final?` });
+                }
             }
-          });
-
-          const completedFactors = p.rows
-            .filter((_, rIdx) => idx > rIdx * 2)
-            .map(r => r.factor);
-
-          html = `
-            <div class="flex flex-col items-center space-y-4">
-              <div class="bg-slate-50/80 px-8 py-5 rounded-3xl border border-slate-200 shadow-inner min-w-[260px]">
-                <div class="grid grid-cols-2 text-[11px] font-fredoka font-bold uppercase tracking-wider text-slate-400 pb-2 mb-1 border-b border-slate-200">
-                  <span class="text-right pr-4">Cocientes</span>
-                  <span class="text-left pl-4">Factores Primos</span>
-                </div>
-                ${rowsHtml}
-              </div>
-
-              <!-- Resumen en vivo de factores encontrados -->
-              <div class="px-4 py-2 rounded-2xl bg-indigo-50/80 border border-indigo-100 text-xs sm:text-sm font-fredoka text-indigo-900">
-                Factores acumulados: <strong class="font-mono">${completedFactors.length ? completedFactors.join(' × ') : 'ninguno aún'}</strong>
-              </div>
-            </div>
-          `;
-          break;
+            currentState.steps = steps;
         }
 
-        case 'mcd': {
-          let rowsHtml = '';
-          p.ladder.forEach((row, rIdx) => {
-            const fIdx = rIdx * 2;
-            const qIdx = rIdx * 2 + 1;
-            const showRow = rIdx === 0 || idx >= fIdx;
-            const factorDone = idx > fIdx;
-            const factorActive = idx === fIdx;
-            const quotActive = idx === qIdx;
-            const quotDone = idx > qIdx;
+        // --- B. DIVISIÓN: Cociente y luego Residuo ---
+        function genColDiv() {
+            let div = currentState.difficulty === 'reto' ? rand(11, 25) : rand(2, 9);
+            let quo = currentState.difficulty === 'facil' ? rand(12, 49) : rand(105, 999);
+            let dividend = div * quo + rand(0, div - 1);
+            let divStr = dividend.toString();
+            
+            let steps = [];
+            currentState.data = { div, dividend: divStr, qArr: Array(divStr.length).fill(''), residues: [], curDivVal: 0 };
 
-            if (showRow) {
-              rowsHtml += `
-                <div class="flex items-center justify-between gap-4 py-1.5 border-b border-slate-100">
-                  <div class="flex items-center gap-3 font-extrabold text-2xl text-slate-800 min-w-[120px] justify-end pr-3">
-                    <span class="px-2.5 py-1 rounded-lg bg-white border border-slate-200">${row.a}</span>
-                    <span class="text-slate-300">-</span>
-                    <span class="px-2.5 py-1 rounded-lg bg-white border border-slate-200">${row.b}</span>
-                  </div>
-                  <div class="border-l-4 border-indigo-600 pl-4">
-                    <div class="w-12 h-11 rounded-xl flex items-center justify-center border-2 text-xl font-bold ${
-                      factorActive
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (factorDone ? 'bg-amber-100 border-amber-400 text-amber-900 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${factorDone ? row.factor : (factorActive ? '?' : '·')}
-                    </div>
-                  </div>
-                </div>
-              `;
+            let currentDiv = parseInt(divStr[0]);
+            let idx = 0;
+            if (currentDiv < div) { currentDiv = parseInt(divStr[0] + divStr[1]); idx = 1; }
+
+            while(idx < divStr.length) {
+                let q = Math.floor(currentDiv / div);
+                let rem = currentDiv % div;
+                
+                steps.push({ type: 'quo', expected: q, qIdx: idx, val: currentDiv, msg: `¿Cuántas veces cabe ${div} en ${currentDiv}?` });
+                steps.push({ type: 'rem', expected: rem, qIdx: idx, val: currentDiv, sub: q*div, msg: `Resta ${q*div} a ${currentDiv}. ¿Cuál es el residuo?` });
+                
+                idx++;
+                if (idx < divStr.length) {
+                    currentDiv = parseInt(rem.toString() + divStr[idx]);
+                }
+            }
+            currentState.steps = steps;
+        }
+
+        // --- C. FACTORES PRIMOS: Adivinar Primo -> Adivinar División ---
+        function genPrimos() {
+            let num = currentState.difficulty === 'facil' ? rand(12, 40) : rand(50, 150);
+            while(primes.includes(num)) num++; 
+            
+            let temp = num, steps = [], row = 0;
+            currentState.data = { grid: [{ left: num, right: '?' }] };
+
+            while(temp > 1) {
+                let p = primes.find(x => temp % x === 0) || temp;
+                steps.push({ type: 'prime', expected: p, row: row, msg: `¿Cuál es el número primo MENOR (2,3,5...) que divide a ${temp}?` });
+                temp /= p;
+                steps.push({ type: 'quotient', expected: temp, row: row, msg: `¿Cuánto es la mitad/tercia/etc de ${temp*p}?` });
+                row++;
+            }
+            currentState.steps = steps;
+        }
+
+        // --- D. MCD / MCM: Formato Escalera Vertical ---
+        function genMCD() {
+            let a = rand(12, 36), b = rand(12, 36);
+            if(a===b) b+=2;
+            let tempA = a, tempB = b, steps = [], row = 0, factors = [];
+            currentState.data = { title: `MCD(${a}, ${b})`, grid: [{ c1: a, c2: b, p: '?' }] };
+
+            while(true) {
+                let p = primes.find(x => tempA % x === 0 && tempB % x === 0);
+                if(!p) break;
+                factors.push(p);
+                steps.push({ type: 'prime', expected: p, row: row, msg: `¿Qué primo divide a AMBOS (${tempA} y ${tempB})?` });
+                tempA /= p; tempB /= p;
+                steps.push({ type: 'q1', expected: tempA, row: row, msg: `Divide ${tempA*p} entre ${p}.` });
+                steps.push({ type: 'q2', expected: tempB, row: row, msg: `Divide ${tempB*p} entre ${p}.` });
+                row++;
+                currentState.data.grid.push({ c1: tempA, c2: tempB, p: '?' });
+            }
+            currentState.data.grid[row].p = ''; // No more common primes
+            
+            let ans = factors.reduce((x,y)=>x*y, 1);
+            if(factors.length > 0) steps.push({ type: 'final', expected: ans, msg: `Multiplica los factores comunes: ${factors.join(' × ')}` });
+            else steps.push({ type: 'final', expected: 1, msg: `No hay comunes. El MCD es 1.` });
+            
+            currentState.steps = steps;
+        }
+
+        function genMCM() {
+            let a = rand(6, 20), b = rand(6, 20);
+            let tempA = a, tempB = b, steps = [], row = 0, factors = [];
+            currentState.data = { title: `mcm(${a}, ${b})`, grid: [{ c1: a, c2: b, p: '?' }] };
+
+            while(tempA > 1 || tempB > 1) {
+                let p = primes.find(x => tempA % x === 0 || tempB % x === 0);
+                factors.push(p);
+                steps.push({ type: 'prime', expected: p, row: row, msg: `¿Qué primo divide a ALGUNO de los dos?` });
+                if(tempA%p===0) tempA/=p;
+                steps.push({ type: 'q1', expected: tempA, row: row, msg: `Divide o baja el número igual.` });
+                if(tempB%p===0) tempB/=p;
+                steps.push({ type: 'q2', expected: tempB, row: row, msg: `Divide o baja el número igual.` });
+                row++;
+                if(tempA > 1 || tempB > 1) currentState.data.grid.push({ c1: tempA, c2: tempB, p: '?' });
+            }
+            let ans = factors.reduce((x,y)=>x*y, 1);
+            steps.push({ type: 'final', expected: ans, msg: `Multiplica todos los primos de la derecha.` });
+            currentState.steps = steps;
+        }
+
+        // --- E. FRACCIONES ---
+        function genFracciones() {
+            let d1 = rand(2, 6), d2 = rand(2, 6);
+            let n1 = rand(1, 5), n2 = rand(1, 5);
+            let steps = [];
+            
+            if (currentState.topic === 'frac_eq') {
+                let m = rand(2,5);
+                currentState.data = { n1, d1, n2: n1*m, d2: d1*m, missing: 'num' };
+                steps = [{type:'eq', expected: n1*m, msg: 'Encuentra el numerador equivalente.'}];
+            } else if (currentState.topic === 'frac_sum') {
+                let df = (d1*d2)/mcdCalc(d1,d2);
+                let nf = (n1*(df/d1)) + (n2*(df/d2));
+                currentState.data = { n1, d1, n2, d2, nf, df };
+                steps = [{type:'den', expected:df, msg:'Denominador común (mcm)'}, {type:'num', expected:nf, msg:'Suma de numeradores equivalentes'}];
+            } else if (currentState.topic === 'frac_mul') {
+                currentState.data = { n1, d1, n2, d2, nf: n1*n2, df: d1*d2 };
+                steps = [{type:'num', expected:n1*n2, msg:'Multiplica directo arriba'}, {type:'den', expected:d1*d2, msg:'Multiplica directo abajo'}];
+            } else if (currentState.topic === 'frac_div') {
+                currentState.data = { n1, d1, n2, d2, nf: n1*d2, df: d1*n2 };
+                steps = [{type:'num', expected:n1*d2, msg:'Multiplica cruzado (n1 x d2)'}, {type:'den', expected:d1*n2, msg:'Multiplica cruzado (d1 x n2)'}];
+            }
+            currentState.steps = steps;
+        }
+
+
+        // --- 5. MOTOR DE RENDERIZADO VISUAL ---
+        function renderStep() {
+            const canvas = document.getElementById('mathCanvas');
+            let d = currentState.data;
+            let stepDef = currentState.steps[currentState.stepIndex];
+            let html = '';
+
+            // Barra de progreso y textos
+            let pct = currentState.steps.length > 0 ? (currentState.stepIndex / currentState.steps.length)*100 : 100;
+            document.getElementById('stepProgressBar').style.width = pct + '%';
+            
+            if (stepDef) {
+                document.getElementById('instructionTitle').innerText = `Paso ${currentState.stepIndex + 1} de ${currentState.steps.length}`;
+                document.getElementById('instructionDesc').innerText = stepDef.msg;
             }
 
-            if (quotActive || (quotDone && rIdx === p.ladder.length - 1)) {
-              rowsHtml += `
-                <div class="flex items-center justify-between gap-4 py-2">
-                  <div class="flex items-center gap-3 font-extrabold text-2xl min-w-[120px] justify-end pr-3">
-                    <div class="w-14 h-11 rounded-xl flex items-center justify-center border-2 ${
-                      quotActive
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : 'bg-emerald-50 border-emerald-400 text-emerald-800 animate-pop-in'
-                    }">
-                      ${quotDone ? row.nextA : '?'}
-                    </div>
-                    <span class="text-slate-300">-</span>
-                    <div class="px-2.5 py-1 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700">
-                      ${quotDone ? row.nextB : `${row.b}÷${row.factor}`}
-                    </div>
-                  </div>
-                  <div class="pl-4 text-xs font-fredoka text-slate-400">Coprimos</div>
-                </div>
-              `;
+            // RENDER: MULTIPLICACIÓN
+            if (currentState.topic === 'col_mul') {
+                html += `<div class="flex flex-col items-end font-mono text-5xl font-bold tracking-widest relative mt-8">`;
+                
+                // Acarreos Animados
+                html += `<div class="flex h-10 mb-2 text-2xl">`;
+                for(let i=0; i<d.carries.length; i++) {
+                    html += `<div class="w-12 text-center text-amber-500 font-black">${d.carries[i] > 0 ? `<span class="animate-pop-in inline-block bg-amber-100 rounded-full px-1 border border-amber-300">⬆️+${d.carries[i]}</span>` : '&nbsp;'}</div>`;
+                }
+                html += `</div>`;
+                
+                // Superior
+                html += `<div class="flex"><div class="w-12">&nbsp;</div>`;
+                for(let char of d.n1) html += `<div class="w-12 text-center">${char}</div>`;
+                html += `</div>`;
+                
+                // Inferior
+                html += `<div class="flex border-b-4 border-slate-800 pb-2 mb-2 relative">`;
+                html += `<div class="absolute left-[-2rem] text-indigo-600 top-1">×</div>`;
+                for(let i=0; i<d.n1.length + 1 - d.n2.length; i++) html += `<div class="w-12">&nbsp;</div>`;
+                for(let char of d.n2) html += `<div class="w-12 text-center text-indigo-900">${char}</div>`;
+                html += `</div>`;
+
+                // Filas parciales
+                d.rows.forEach((rowArr, rowIdx) => {
+                    html += `<div class="flex">`;
+                    for(let i=0; i<rowArr.length; i++) {
+                        let val = rowArr[i];
+                        let isActive = (stepDef && stepDef.type === 'mul_digit' && stepDef.rowIdx === rowIdx && (stepDef.colIdx === i || (stepDef.colIdx === -1 && i===0)));
+                        
+                        if (val !== '') html += `<div class="w-12 text-center text-emerald-600 glow-success animate-pop-in">${val}</div>`;
+                        else if (isActive) html += `<div class="w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
+                        else html += `<div class="w-12 text-center text-transparent">_</div>`;
+                    }
+                    html += `</div>`;
+                });
+
+                // Suma Final (si hay más de 1 dígito)
+                if (d.n2.length > 1 && currentState.stepIndex >= d.rows.length * (d.n1.length + 1)) {
+                    html += `<div class="flex border-t-4 border-slate-800 pt-2 mt-2">`;
+                    for(let i=0; i<d.finalAns.length; i++) {
+                        let val = d.finalAns[i];
+                        let isActive = (stepDef && stepDef.type === 'add_final' && stepDef.colIdx === i);
+                        if (val !== '') html += `<div class="w-12 text-center text-emerald-600 font-black animate-pop-in">${val}</div>`;
+                        else if (isActive) html += `<div class="w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
+                        else html += `<div class="w-12 text-center text-transparent">_</div>`;
+                    }
+                    html += `</div>`;
+                }
+                html += `</div>`;
             }
-          });
+            
+            // RENDER: DIVISIÓN CASITA
+            else if (currentState.topic === 'col_div') {
+                html += `<div class="flex flex-col items-center font-mono text-4xl font-bold">`;
+                
+                // Cociente Arriba
+                html += `<div class="flex ml-12 mb-1">`;
+                for(let i=0; i<d.qArr.length; i++) {
+                    let isActive = (stepDef && stepDef.type === 'quo' && stepDef.qIdx === i);
+                    if (d.qArr[i] !== '') html += `<div class="w-12 text-center text-emerald-600 glow-success animate-pop-in">${d.qArr[i]}</div>`;
+                    else if (isActive) html += `<div class="w-12 text-center text-indigo-700 bg-indigo-50 rounded-lg target-highlight">?</div>`;
+                    else html += `<div class="w-12 text-center text-transparent">_</div>`;
+                }
+                html += `</div>`;
+                
+                // Casita
+                html += `<div class="flex items-center">`;
+                html += `<div class="pr-3 text-slate-700">${d.div}</div>`;
+                html += `<div class="border-l-4 border-t-4 border-slate-800 pl-2 pt-1 flex">`;
+                for(let char of d.dividend) html += `<div class="w-12 text-center text-slate-800">${char}</div>`;
+                html += `</div></div>`;
 
-          const finalStepIdx = p.ladder.length * 2;
-          const isFinalStep = idx === finalStepIdx;
-          const isFinished = idx > finalStepIdx;
+                // Residuos y Restas
+                html += `<div class="flex flex-col w-full ml-12 text-2xl text-slate-500 items-start pl-[${d.curDivVal.toString().length * 1.5}rem]">`;
+                d.residues.forEach((r, idx) => {
+                    html += `<div class="text-rose-500 animate-pop-in mt-1">-${r.sub}</div>`;
+                    html += `<div class="border-t-2 border-slate-400 text-emerald-600 font-bold mb-2 w-16 text-right">${r.rem}</div>`;
+                });
+                
+                if (stepDef && stepDef.type === 'rem') {
+                    html += `<div class="text-rose-500 mt-1">-${stepDef.sub}</div>`;
+                    html += `<div class="border-t-2 border-slate-400 text-indigo-700 bg-indigo-50 px-4 py-1 rounded-xl target-highlight w-auto mt-1">Resta = ?</div>`;
+                }
+                html += `</div></div>`;
+            }
 
-          html = `
-            <div class="flex flex-col items-center space-y-4">
-              <div class="bg-slate-50/90 px-6 py-4 rounded-3xl border border-slate-200 shadow-inner">
-                <div class="text-xs font-fredoka font-bold uppercase text-slate-400 mb-2">Tabla de Divisores Comunes</div>
-                ${rowsHtml}
-              </div>
+            // RENDER: FACTORES PRIMOS Y MCD/MCM (Mismo formato escalera)
+            else if (currentState.topic === 'primos' || currentState.topic === 'mcd' || currentState.topic === 'mcm') {
+                if (d.title) html += `<div class="text-xl font-bold text-slate-400 mb-6 bg-slate-100 px-4 py-1 rounded-full">${d.title}</div>`;
+                
+                html += `<div class="flex font-mono text-4xl font-bold bg-white p-6 rounded-3xl border-2 border-slate-100 shadow-sm">`;
+                
+                // Columna(s) Izquierda
+                html += `<div class="flex flex-col items-end pr-6 border-r-4 border-slate-800">`;
+                d.grid.forEach((row, i) => {
+                    let isActQ1 = (stepDef && (stepDef.type === 'quotient' || stepDef.type === 'q1') && stepDef.row === i);
+                    let isActQ2 = (stepDef && stepDef.type === 'q2' && stepDef.row === i);
+                    
+                    html += `<div class="py-2 flex gap-6 items-center">`;
+                    if (row.left !== undefined) {
+                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.left}</div>`;
+                    } else {
+                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c1}</div>`;
+                        html += `<div class="text-slate-300 text-2xl">-</div>`;
+                        html += isActQ2 ? `<div class="text-indigo-700 target-highlight px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c2}</div>`;
+                    }
+                    html += `</div>`;
+                });
+                html += `</div>`;
+                
+                // Columna Derecha (Primos)
+                html += `<div class="flex flex-col items-center pl-6">`;
+                d.grid.forEach((row, i) => {
+                    let pVal = row.right || row.p;
+                    let isActive = (stepDef && stepDef.type === 'prime' && stepDef.row === i);
+                    if (pVal !== '?' && pVal !== '') html += `<div class="py-2 text-emerald-600 glow-success animate-pop-in">${pVal}</div>`;
+                    else if (isActive) html += `<div class="py-2 text-indigo-700 target-highlight px-3 rounded-lg">?</div>`;
+                    else if (pVal === '') html += `<div class="py-2 text-transparent">_</div>`;
+                });
+                html += `</div></div>`;
+                
+                if (stepDef && stepDef.type === 'final') {
+                    html += `<div class="mt-8 text-3xl font-bold text-indigo-700 bg-indigo-50 px-8 py-3 rounded-2xl target-highlight shadow-inner">Resultado = ?</div>`;
+                }
+            }
 
-              <!-- Casilla del Producto Final MCD -->
-              <div class="flex items-center gap-3 px-5 py-3 rounded-2xl bg-indigo-50/70 border border-indigo-200">
-                <span class="font-fredoka text-sm font-bold text-indigo-950">MCD(${p.a}, ${p.b}) =</span>
-                <div class="w-16 h-11 rounded-xl flex items-center justify-center border-2 text-xl font-extrabold ${
-                  isFinalStep
-                    ? 'target-highlight bg-white border-indigo-600 text-indigo-700'
-                    : (isFinished ? 'bg-emerald-500 border-emerald-600 text-white animate-pop-in' : 'bg-white border-dashed border-indigo-300 text-indigo-300')
-                }">
-                  ${isFinished ? p.resMCD : (isFinalStep ? '?' : '·')}
-                </div>
-              </div>
-            </div>
-          `;
-          break;
+            // RENDER: FRACCIONES
+            else if (currentState.topic.startsWith('frac_')) {
+                html += `<div class="flex items-center gap-6 text-5xl font-bold font-fredoka text-slate-800 mt-4">`;
+                html += `<div class="math-frac"><span>${d.n1}</span><div class="math-frac-line"></div><span>${d.d1}</span></div>`;
+                
+                let op = '=';
+                if(currentState.topic==='frac_sum') op = '+';
+                if(currentState.topic==='frac_mul') op = '×';
+                if(currentState.topic==='frac_div') op = '÷';
+                html += `<div class="text-indigo-600 bg-indigo-50 w-12 h-12 flex items-center justify-center rounded-full text-3xl">${op}</div>`;
+                
+                if (currentState.topic !== 'frac_eq') {
+                    html += `<div class="math-frac"><span>${d.n2}</span><div class="math-frac-line"></div><span>${d.d2}</span></div>`;
+                    html += `<div class="text-indigo-600 text-3xl">=</div>`;
+                }
+
+                let numDone = currentState.stepIndex > (currentState.topic==='frac_sum'? 1:0);
+                let denDone = currentState.stepIndex > 0;
+                if(currentState.topic === 'frac_eq') { numDone = true; denDone = true; } // Solo 1 paso
+                
+                let fNum = numDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.nf || d.n2}</span>` : (stepDef && (stepDef.type==='num' || stepDef.type==='eq') ? `<span class="target-highlight px-4 rounded-xl text-indigo-700 min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                let fDen = denDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.df || d.d2}</span>` : (stepDef && stepDef.type==='den' ? `<span class="target-highlight px-4 rounded-xl text-indigo-700 min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                
+                html += `<div class="math-frac"><span>${fNum}</span><div class="math-frac-line"></div><span>${fDen}</span></div>`;
+                html += `</div>`;
+            }
+
+            canvas.innerHTML = html;
         }
 
-        case 'mcm': {
-          const s0 = idx >= 1;
-          const s1 = idx >= 2;
-          const s2 = idx >= 3;
+        // --- 6. VERIFICACIÓN Y FLUJO ---
+        function verifyStep() {
+            if (currentState.stepIndex >= currentState.steps.length) return;
+            
+            const inputEl = document.getElementById('answerInput');
+            const inputVal = inputEl.value.trim();
+            if (!inputVal) return;
 
-          html = `
-            <div class="flex flex-col items-center space-y-4 w-full max-w-md">
-              <!-- Números base -->
-              <div class="flex items-center gap-4">
-                <span class="px-5 py-2.5 rounded-2xl bg-indigo-600 text-white font-extrabold text-2xl shadow-sm">${p.a}</span>
-                <span class="font-fredoka text-sm font-bold text-slate-400">y</span>
-                <span class="px-5 py-2.5 rounded-2xl bg-indigo-600 text-white font-extrabold text-2xl shadow-sm">${p.b}</span>
-              </div>
+            let stepDef = currentState.steps[currentState.stepIndex];
+            let expectedStr = stepDef.expected.toString();
+            let isCorrect = inputVal === expectedStr;
 
-              <!-- Tarjetas secuenciales dinámicas -->
-              <div class="grid grid-cols-3 gap-2.5 w-full pt-2">
-                <!-- Paso 1: MCD -->
-                <div class="p-3 rounded-2xl border-2 flex flex-col items-center justify-between ${
-                  idx === 0 ? 'target-highlight bg-indigo-50 border-indigo-600' : (s0 ? 'bg-emerald-50 border-emerald-400' : 'bg-white border-slate-200')
-                }">
-                  <span class="text-[11px] font-fredoka font-bold text-slate-500">1. MCD(${p.a},${p.b})</span>
-                  <span class="text-2xl font-extrabold mt-1 ${s0 ? 'text-emerald-700 animate-pop-in' : 'text-indigo-700'}">
-                    ${s0 ? p.divMCD : '?'}
-                  </span>
-                </div>
+            // Flexibilidad en Multiplicación: Aceptar el producto completo o solo la unidad
+            if (currentState.topic === 'col_mul' && stepDef.type === 'mul_digit') {
+                 let fullProd = stepDef.expected + (stepDef.nextCarry * 10);
+                 if (inputVal === fullProd.toString()) isCorrect = true;
+            }
 
-                <!-- Paso 2: Producto -->
-                <div class="p-3 rounded-2xl border-2 flex flex-col items-center justify-between ${
-                  idx === 1 ? 'target-highlight bg-indigo-50 border-indigo-600' : (s1 ? 'bg-emerald-50 border-emerald-400' : 'bg-white border-slate-200')
-                }">
-                  <span class="text-[11px] font-fredoka font-bold text-slate-500">2. Producto ${p.a}×${p.b}</span>
-                  <span class="text-2xl font-extrabold mt-1 ${s1 ? 'text-emerald-700 animate-pop-in' : 'text-indigo-700'}">
-                    ${s1 ? p.prodAB : (idx === 1 ? '?' : '·')}
-                  </span>
-                </div>
+            if (isCorrect) {
+                // Actualizar Modelo
+                if (currentState.topic === 'col_mul') {
+                    if (stepDef.type === 'mul_digit') {
+                        if(stepDef.colIdx === -1) currentState.data.rows[stepDef.rowIdx][0] = stepDef.expected;
+                        else currentState.data.rows[stepDef.rowIdx][stepDef.colIdx] = stepDef.expected;
+                        if(stepDef.nextCarry > 0) currentState.data.carries[stepDef.colIdx] = stepDef.nextCarry;
+                    } else if (stepDef.type === 'add_final') {
+                        currentState.data.finalAns[stepDef.colIdx] = stepDef.expected;
+                    }
+                }
+                else if (currentState.topic === 'col_div') {
+                    if (stepDef.type === 'quo') currentState.data.qArr[stepDef.qIdx] = stepDef.expected;
+                    if (stepDef.type === 'rem') currentState.data.residues.push({ sub: stepDef.sub, rem: stepDef.expected });
+                }
+                else if (currentState.topic === 'primos') {
+                    if (stepDef.type === 'prime') currentState.data.grid[stepDef.row].right = stepDef.expected;
+                    if (stepDef.type === 'quotient') {
+                        currentState.data.grid[stepDef.row].left = stepDef.expected;
+                        if(stepDef.expected > 1) currentState.data.grid.push({ left: stepDef.expected, right: '?' });
+                    }
+                }
+                else if (currentState.topic === 'mcd' || currentState.topic === 'mcm') {
+                    if (stepDef.type === 'prime') currentState.data.grid[stepDef.row].p = stepDef.expected;
+                    if (stepDef.type === 'q1') currentState.data.grid[stepDef.row].c1 = stepDef.expected;
+                    if (stepDef.type === 'q2') currentState.data.grid[stepDef.row].c2 = stepDef.expected;
+                }
 
-                <!-- Paso 3: mcm final -->
-                <div class="p-3 rounded-2xl border-2 flex flex-col items-center justify-between ${
-                  idx === 2 ? 'target-highlight bg-indigo-50 border-indigo-600' : (s2 ? 'bg-emerald-50 border-emerald-400' : 'bg-white border-slate-200')
-                }">
-                  <span class="text-[11px] font-fredoka font-bold text-slate-500">3. mcm Final</span>
-                  <span class="text-2xl font-extrabold mt-1 ${s2 ? 'text-emerald-700 animate-pop-in' : 'text-indigo-700'}">
-                    ${s2 ? p.resMCM : (idx === 2 ? '?' : '·')}
-                  </span>
-                </div>
-              </div>
-            </div>
-          `;
-          break;
+                currentState.stepIndex++;
+                triggerStepBurst();
+                
+                if (currentState.stepIndex >= currentState.steps.length) finishProblem();
+                else renderStep();
+                
+            } else {
+                inputEl.classList.add('animate-shake', 'border-rose-400', 'bg-rose-50', 'text-rose-700');
+                setTimeout(() => inputEl.classList.remove('animate-shake', 'border-rose-400', 'bg-rose-50', 'text-rose-700'), 400);
+            }
+            
+            inputEl.value = ''; inputEl.focus();
         }
 
-        case 'frac_eq': {
-          const factorFound = idx >= 1;
-          const numFound = idx >= 2;
-
-          html = `
-            <div class="flex flex-col items-center space-y-4">
-              <!-- Arco superior de multiplicación -->
-              <div class="flex items-center gap-2 text-xs font-fredoka font-bold text-indigo-700 bg-indigo-50 px-3.5 py-1 rounded-full border border-indigo-200">
-                <span>Factor de escala:</span>
-                <span class="px-2 py-0.5 rounded-md font-mono text-sm ${
-                  idx === 0
-                    ? 'target-highlight bg-white text-indigo-700 border border-indigo-500'
-                    : 'bg-emerald-500 text-white animate-pop-in'
-                }">
-                  ×${factorFound ? p.scale : '?'}
-                </span>
-              </div>
-
-              <!-- Fracciones Equivalentes -->
-              <div class="flex items-center justify-center gap-6 font-mono text-3xl sm:text-4xl font-bold bg-slate-50/80 px-8 py-6 rounded-3xl border border-slate-200">
-                <div class="flex flex-col items-center">
-                  <span class="border-b-4 border-slate-800 pb-2 px-4">${p.num}</span>
-                  <span class="pt-2 px-4 text-slate-600">${p.den}</span>
-                </div>
-
-                <span class="text-indigo-600 text-4xl font-extrabold">=</span>
-
-                <div class="flex flex-col items-center">
-                  <div class="border-b-4 border-slate-800 pb-2 px-3">
-                    <div class="min-w-[3.2rem] h-12 rounded-xl flex items-center justify-center border-2 ${
-                      idx === 1
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (numFound ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${numFound ? p.missingNum : (idx === 1 ? '?' : '·')}
-                    </div>
-                  </div>
-                  <span class="pt-2 px-4 text-slate-900">${p.missingDen}</span>
-                </div>
-              </div>
-            </div>
-          `;
-          break;
+        function triggerStepBurst() {
+            confetti({ particleCount: 20, spread: 40, origin: { y: 0.8 }, colors: ['#10B981', '#34D399'] });
         }
 
-        case 'frac_add': {
-          const denDone = idx >= 1;
-          const n1Done = idx >= 2;
-          const n2Done = idx >= 3;
-          const sumDone = idx >= 4;
-
-          html = `
-            <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-5 font-mono text-2xl sm:text-3xl font-bold bg-slate-50/80 px-6 py-6 rounded-3xl border border-slate-200">
-              <!-- Suma original -->
-              <div class="flex flex-col items-center">
-                <span class="border-b-4 border-slate-800 px-3 pb-1">${p.n1}</span>
-                <span class="px-3 pt-1 text-slate-600">${p.d1}</span>
-              </div>
-              <span class="text-indigo-600 font-extrabold">+</span>
-              <div class="flex flex-col items-center">
-                <span class="border-b-4 border-slate-800 px-3 pb-1">${p.n2}</span>
-                <span class="px-3 pt-1 text-slate-600">${p.d2}</span>
-              </div>
-
-              <span class="text-slate-400">=</span>
-
-              <!-- Fracción intermedia con numeradores convertidos y común denominador -->
-              <div class="flex flex-col items-center">
-                <div class="flex items-center gap-2 border-b-4 border-slate-800 pb-2 px-2">
-                  <div class="w-12 h-11 rounded-xl flex items-center justify-center border-2 text-xl ${
-                    idx === 1
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (n1Done ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${n1Done ? p.newN1 : (idx === 1 ? '?' : '·')}
-                  </div>
-                  <span class="text-indigo-600 text-xl">+</span>
-                  <div class="w-12 h-11 rounded-xl flex items-center justify-center border-2 text-xl ${
-                    idx === 2
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (n2Done ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${n2Done ? p.newN2 : (idx === 2 ? '?' : '·')}
-                  </div>
-                </div>
-                <!-- Denominador común -->
-                <div class="pt-2">
-                  <div class="w-16 h-11 rounded-xl flex items-center justify-center border-2 text-xl ${
-                    idx === 0
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (denDone ? 'bg-amber-100 border-amber-400 text-amber-900 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${denDone ? p.comDen : '?'}
-                  </div>
-                </div>
-              </div>
-
-              <span class="text-slate-400">=</span>
-
-              <!-- Fracción resultado final -->
-              <div class="flex flex-col items-center">
-                <div class="border-b-4 border-slate-800 pb-2 px-2">
-                  <div class="w-14 h-11 rounded-xl flex items-center justify-center border-2 text-xl ${
-                    idx === 3
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (sumDone ? 'bg-emerald-100 border-emerald-500 text-emerald-900 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${sumDone ? p.sumN : (idx === 3 ? '?' : '·')}
-                  </div>
-                </div>
-                <span class="pt-2 px-3 ${denDone ? 'text-slate-800' : 'text-slate-300'}">${denDone ? p.comDen : '·'}</span>
-              </div>
-            </div>
-          `;
-          break;
+        function finishProblem() {
+            renderStep();
+            document.getElementById('inputContainer').classList.add('hidden');
+            document.getElementById('successMessage').classList.remove('hidden');
+            
+            let ptsGanados = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
+            studentData.puntos += ptsGanados;
+            studentData.racha += 1;
+            studentData.resueltos += 1;
+            studentData.stats[currentState.topic] = (studentData.stats[currentState.topic] || 0) + 1;
+            
+            document.getElementById('rewardText').innerText = ptsGanados;
+            actualizarUIEstudiante();
+            guardarProgreso();
+            
+            confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, zIndex: 200 });
         }
 
-        case 'frac_mul': {
-          const numDone = idx >= 1;
-          const denDone = idx >= 2;
-          const hasSimp = p.steps.length === 3;
-          const simpDone = idx >= 3;
-
-          html = `
-            <div class="flex flex-wrap items-center justify-center gap-4 sm:gap-6 font-mono text-3xl font-bold bg-slate-50/80 px-8 py-6 rounded-3xl border border-slate-200">
-              <div class="flex flex-col items-center">
-                <span class="border-b-4 border-slate-800 px-3 pb-1">${p.n1}</span>
-                <span class="px-3 pt-1 text-slate-600">${p.d1}</span>
-              </div>
-              <span class="text-indigo-600 font-extrabold">×</span>
-              <div class="flex flex-col items-center">
-                <span class="border-b-4 border-slate-800 px-3 pb-1">${p.n2}</span>
-                <span class="px-3 pt-1 text-slate-600">${p.d2}</span>
-              </div>
-              <span class="text-slate-400">=</span>
-
-              <!-- Fracción multiplicada -->
-              <div class="flex flex-col items-center">
-                <div class="border-b-4 border-slate-800 pb-2 px-2">
-                  <div class="w-16 h-12 rounded-xl flex items-center justify-center border-2 ${
-                    idx === 0
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (numDone ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${numDone ? p.finalN : '?'}
-                  </div>
-                </div>
-                <div class="pt-2 px-2">
-                  <div class="w-16 h-12 rounded-xl flex items-center justify-center border-2 ${
-                    idx === 1
-                      ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                      : (denDone ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                  }">
-                    ${denDone ? p.finalD : (idx === 1 ? '?' : '·')}
-                  </div>
-                </div>
-              </div>
-
-              ${hasSimp ? `
-                <span class="text-indigo-500">=</span>
-                <div class="flex flex-col items-center">
-                  <div class="border-b-4 border-slate-800 pb-2 px-2">
-                    <div class="w-14 h-12 rounded-xl flex items-center justify-center border-2 ${
-                      idx === 2
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (simpDone ? 'bg-emerald-100 border-emerald-500 text-emerald-900 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${simpDone ? p.simpN : (idx === 2 ? '?' : '·')}
-                    </div>
-                  </div>
-                  <span class="pt-2 px-3 text-emerald-700">${denDone ? p.simpD : '·'}</span>
-                </div>
-              ` : ''}
-            </div>
-          `;
-          break;
-        }
-
-        case 'frac_div': {
-          const crossNDone = idx >= 1;
-          const crossDDone = idx >= 2;
-
-          html = `
-            <div class="flex flex-col items-center space-y-3">
-              <div class="flex items-center justify-center gap-4 sm:gap-6 font-mono text-3xl font-bold bg-slate-50/80 px-8 py-6 rounded-3xl border border-slate-200">
-                <div class="flex flex-col items-center">
-                  <span class="border-b-4 border-slate-800 px-3 pb-1 text-indigo-700">${p.n1}</span>
-                  <span class="px-3 pt-1 text-amber-700">${p.d1}</span>
-                </div>
-                <span class="text-indigo-600 font-extrabold">÷</span>
-                <div class="flex flex-col items-center">
-                  <span class="border-b-4 border-slate-800 px-3 pb-1 text-amber-700">${p.n2}</span>
-                  <span class="px-3 pt-1 text-indigo-700">${p.d2}</span>
-                </div>
-                <span class="text-slate-400">=</span>
-
-                <div class="flex flex-col items-center">
-                  <div class="border-b-4 border-slate-800 pb-2 px-2">
-                    <div class="w-16 h-12 rounded-xl flex items-center justify-center border-2 ${
-                      idx === 0
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (crossNDone ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${crossNDone ? p.crossN : '?'}
-                    </div>
-                  </div>
-                  <div class="pt-2 px-2">
-                    <div class="w-16 h-12 rounded-xl flex items-center justify-center border-2 ${
-                      idx === 1
-                        ? 'target-highlight bg-indigo-50 border-indigo-600 text-indigo-700'
-                        : (crossDDone ? 'bg-emerald-50 border-emerald-500 text-emerald-700 animate-pop-in' : 'bg-white border-dashed border-slate-300 text-slate-300')
-                    }">
-                      ${crossDDone ? p.crossD : (idx === 1 ? '?' : '·')}
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <span class="text-xs font-fredoka text-slate-400">
-                Regla del producto cruzado: (${p.n1} × ${p.d2}) arriba y (${p.d1} × ${p.n2}) abajo
-              </span>
-            </div>
-          `;
-          break;
-        }
-      }
-
-      canvas.innerHTML = html;
-    }
-
-    /* ==============================================================
-       6. MANEJO DE PASOS, ACTUALIZACIÓN DE NODOS Y COMPROBACIÓN
-       ============================================================== */
-    function updateStepHeader() {
-      if (!currentProblem) return;
-      const totalSteps = currentProblem.steps.length;
-      const safeIndex = Math.min(currentStepIndex, totalSteps - 1);
-      const step = currentProblem.steps[safeIndex];
-
-      document.getElementById('stepCounterText').innerHTML = `
-        <span class="w-2.5 h-2.5 rounded-full bg-indigo-600 animate-ping"></span>
-        Paso ${safeIndex + 1} de ${totalSteps}
-      `;
-
-      // Renderizar bolitas de progreso paso por paso
-      const nodesEl = document.getElementById('stepNodesContainer');
-      if (nodesEl) {
-        nodesEl.innerHTML = currentProblem.steps.map((_, i) => {
-          if (i < currentStepIndex) {
-            return `<span class="w-6 h-6 rounded-full bg-emerald-500 text-white text-[11px] font-bold flex items-center justify-center shadow-2xs animate-pop-in">✓</span>`;
-          } else if (i === currentStepIndex) {
-            return `<span class="w-6 h-6 rounded-full bg-indigo-600 text-white text-[11px] font-bold flex items-center justify-center ring-4 ring-indigo-200">${i + 1}</span>`;
-          } else {
-            return `<span class="w-6 h-6 rounded-full bg-slate-200 text-slate-500 text-[11px] font-bold flex items-center justify-center">${i + 1}</span>`;
-          }
-        }).join('');
-      }
-
-      const pct = Math.round((currentStepIndex / totalSteps) * 100);
-      document.getElementById('stepProgressBar').style.width = `${Math.max(12, pct)}%`;
-      document.getElementById('stepPercentage').innerText = `${pct}% completado`;
-
-      document.getElementById('stepInstructionTitle').innerText = step.instruction;
-      document.getElementById('stepInstructionDesc').innerText = step.desc;
-
-      const opBadge = document.getElementById('expectedOperationBadge');
-      if (opBadge) {
-        if (step.badge) {
-          opBadge.innerText = step.badge;
-          opBadge.classList.remove('hidden');
-        } else {
-          opBadge.classList.add('hidden');
-        }
-      }
-
-      const statusBadge = document.getElementById('liveStepStatusBadge');
-      if (statusBadge) {
-        statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 font-fredoka';
-        statusBadge.innerText = `Paso ${safeIndex + 1}/${totalSteps}: Completa la casilla [ ? ]`;
-      }
-
-      const input = document.getElementById('stepInput');
-      if (input) {
-        input.value = '';
-        input.focus();
-      }
-    }
-
-    function showFeedback(isSuccess, message) {
-      const fb = document.getElementById('feedbackMessage');
-      if (!fb) return;
-      fb.classList.remove('hidden', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-200', 'bg-amber-50', 'text-amber-800', 'border-amber-200');
-
-      if (isSuccess) {
-        fb.classList.add('bg-emerald-50', 'text-emerald-700', 'border', 'border-emerald-200');
-        fb.innerHTML = `✨ ${message}`;
-      } else {
-        fb.classList.add('bg-amber-50', 'text-amber-800', 'border', 'border-amber-200');
-        fb.innerHTML = `💡 ${message}`;
-      }
-
-      fb.style.display = 'block';
-    }
-
-    function handleStepSubmit(e) {
-      e.preventDefault();
-      if (!currentProblem) return;
-
-      const input = document.getElementById('stepInput');
-      const userVal = parseInt(input.value.trim(), 10);
-      if (isNaN(userVal)) return;
-
-      const step = currentProblem.steps[currentStepIndex];
-      const isCorrect = (userVal === step.expected) || (step.altExpected !== undefined && userVal === step.altExpected);
-
-      if (isCorrect) {
-        // Avance inmediato en la pizarra
-        playSound('step');
-        triggerStepBurst();
-        currentStepIndex++;
-
-        // Actualizar pizarra inmediatamente para que el alumno vea el número colocado
-        renderMathCanvas();
-
-        if (currentStepIndex >= currentProblem.steps.length) {
-          // Mostrar barra al 100% y nodos completados
-          document.getElementById('stepProgressBar').style.width = '100%';
-          document.getElementById('stepPercentage').innerText = '100% completado';
-          const statusBadge = document.getElementById('liveStepStatusBadge');
-          if (statusBadge) {
-            statusBadge.className = 'px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 font-fredoka';
-            statusBadge.innerText = '¡Ejercicio resuelto por completo!';
-          }
-          handleProblemCompleted();
-        } else {
-          updateStepHeader();
-          showFeedback(true, `¡Paso ${currentStepIndex} correcto! La pizarra se ha actualizado, continúa con el siguiente paso.`);
-        }
-      } else {
-        // Error sin penalización con animación suave
-        playSound('error');
-        const formEl = document.getElementById('stepForm');
-        if (formEl) {
-          formEl.classList.remove('animate-shake');
-          void formEl.offsetWidth;
-          formEl.classList.add('animate-shake');
-        }
-        showFeedback(false, `Aún no es el valor exacto. Pista: ${step.hint}`);
-        input.select();
-      }
-    }
-
-    function handleProblemCompleted() {
-      playSound('success');
-      triggerConfettiBurst();
-
-      // Puntos según dificultad: Fácil (+1), Medio (+2), Reto (+3)
-      let ptsToAdd = 1;
-      if (activeDifficulty === 'medio') ptsToAdd = 2;
-      if (activeDifficulty === 'reto') ptsToAdd = 3;
-
-      currentStudent.puntos += ptsToAdd;
-      currentStudent.streak += 1;
-      currentStudent.solvedCount += 1;
-
-      // Actualizar contadores por tema
-      if (currentStudent.topicStats[activeTopic]) {
-        currentStudent.topicStats[activeTopic].solved += 1;
-        currentStudent.topicStats[activeTopic].pts += ptsToAdd;
-      }
-
-      updateUserUI();
-      saveStudentData();
-
-      showFeedback(true, `¡Problema Completado! Ganaste +${ptsToAdd} punto(s) 🏅`);
-
-      // Cargar nuevo ejercicio automáticamente tras una breve pausa
-      setTimeout(() => {
-        generateProblem();
-      }, 1800);
-    }
-
-    function showPedagogicalHint() {
-      if (!currentProblem) return;
-      const step = currentProblem.steps[currentStepIndex];
-      showFeedback(false, step.hint);
-    }
-
-    /* ==============================================================
-       7. CONTROL DE TEMAS, DIFICULTAD Y REINICIO
-       ============================================================== */
-    function selectTopic(topicKey) {
-      activeTopic = topicKey;
-
-      // Actualizar botones de temas
-      document.querySelectorAll('.topic-btn').forEach(btn => {
-        btn.classList.remove('bg-indigo-600', 'text-white', 'border-indigo-600', 'shadow-md');
-        btn.classList.add('bg-white', 'text-slate-700', 'border-slate-200');
-      });
-
-      const selectedBtn = document.getElementById(`topic-${topicKey}`);
-      if (selectedBtn) {
-        selectedBtn.classList.remove('bg-white', 'text-slate-700', 'border-slate-200');
-        selectedBtn.classList.add('bg-indigo-600', 'text-white', 'border-indigo-600', 'shadow-md');
-      }
-
-      // Actualizar cabecera del problema
-      document.getElementById('currentTopicTitle').innerText = TOPIC_NAMES[topicKey] || "Matemáticas";
-      document.getElementById('topicBadgeIcon').innerText = TOPIC_ICONS[topicKey] || "📐";
-
-      generateProblem();
-    }
-
-    function setDifficulty(diff) {
-      activeDifficulty = diff;
-
-      // Actualizar botones
-      document.querySelectorAll('.diff-btn').forEach(b => {
-        b.classList.remove('bg-white', 'text-indigo-700', 'shadow-sm');
-        b.classList.add('text-slate-600');
-      });
-
-      const activeBtn = document.getElementById(`diff-${diff}`);
-      if (activeBtn) {
-        activeBtn.classList.add('bg-white', 'text-indigo-700', 'shadow-sm');
-        activeBtn.classList.remove('text-slate-600');
-      }
-
-      const diffBadge = document.getElementById('currentDiffBadge');
-      if (diff === 'facil') diffBadge.innerText = 'Fácil (+1 pt)';
-      else if (diff === 'medio') diffBadge.innerText = 'Medio (+2 pts)';
-      else diffBadge.innerText = 'Reto (+3 pts)';
-
-      generateProblem();
-    }
-
-    function generateProblem() {
-      currentProblem = createProblem(activeTopic, activeDifficulty);
-      currentStepIndex = 0;
-      renderMathCanvas();
-      updateStepHeader();
-    }
-
-    function resetActiveProblem() {
-      generateProblem();
-    }
-
-    /* ==============================================================
-       8. GESTIÓN DEL ALUMNO Y PERSISTENCIA ESCOLAR
-       ============================================================== */
-    function updateUserUI() {
-      // Header
-      document.getElementById('headerPointsBadge').innerText = `${currentStudent.puntos} pts`;
-      document.getElementById('headerStudentName').innerText = currentStudent.nombre;
-      document.getElementById('headerExpediente').innerText = `Exp: ${currentStudent.expediente}`;
-      document.getElementById('headerAvatar').innerText = currentStudent.avatar;
-
-      // Sidebar
-      document.getElementById('sidebarStudentName').innerText = `${currentStudent.nombre} ${currentStudent.paterno}`.trim();
-      document.getElementById('sidebarExpediente').innerText = currentStudent.expediente;
-      document.getElementById('sidebarGroup').innerText = currentStudent.grupo || '--';
-      document.getElementById('sidebarAvatar').innerText = currentStudent.avatar;
-      document.getElementById('sidebarPoints').innerText = currentStudent.puntos;
-      document.getElementById('sidebarSolvedCount').innerText = currentStudent.solvedCount;
-      const streakEl = document.getElementById('streakCount');
-      if (streakEl) streakEl.innerText = currentStudent.streak;
-
-      // Renderizar progreso por temas
-      renderTopicsProgress();
-    }
-
-    function renderTopicsProgress() {
-      const container = document.getElementById('topicsProgressList');
-      if (!container) return;
-
-      container.innerHTML = Object.keys(TOPIC_NAMES).map(key => {
-        const stat = currentStudent.topicStats[key] || { solved: 0, pts: 0 };
-        const icon = TOPIC_ICONS[key];
-        const name = TOPIC_NAMES[key];
-        const isCurrent = key === activeTopic;
-
-        return `
-          <div class="flex items-center justify-between p-2.5 rounded-xl ${isCurrent ? 'bg-indigo-50/90 border border-indigo-200' : 'bg-slate-50/60 border border-slate-100'} text-xs font-fredoka">
-            <div class="flex items-center gap-2 overflow-hidden pr-2">
-              <span class="text-base">${icon}</span>
-              <span class="font-bold text-slate-700 truncate ${isCurrent ? 'text-indigo-900 font-extrabold' : ''}">${name}</span>
-            </div>
-            <div class="flex items-center gap-2 font-mono text-[11px] font-bold">
-              <span class="px-2 py-0.5 rounded-md bg-white border border-slate-200 text-slate-700 shadow-2xs">${stat.solved} hechos</span>
-              <span class="text-indigo-600">+${stat.pts}pts</span>
-            </div>
-          </div>
-        `;
-      }).join('');
-    }
-
-    function saveStudentData() {
-      try {
-        const key = `mathstep_student_${currentStudent.expediente}`;
-        localStorage.setItem(key, JSON.stringify(currentStudent));
-        localStorage.setItem('mathstep_last_expediente', currentStudent.expediente);
-      } catch (e) {}
-    }
-
-    function loadStudentData(exp) {
-      try {
-        const raw = localStorage.getItem(`mathstep_student_${exp}`);
-        if (raw) {
-          currentStudent = JSON.parse(raw);
-          updateUserUI();
-          return true;
-        }
-      } catch (e) {}
-      return false;
-    }
-
-    /* Modales y Formularios de Alumno */
-    function openStudentModal() {
-      document.getElementById('authModal').classList.remove('hidden');
-    }
-
-    function closeStudentModal() {
-      document.getElementById('authModal').classList.add('hidden');
-    }
-
-    function switchAuthTab(tab) {
-      const btnLog = document.getElementById('tab-login');
-      const btnReg = document.getElementById('tab-register');
-      const formLog = document.getElementById('loginForm');
-      const formReg = document.getElementById('registerForm');
-
-      if (tab === 'login') {
-        btnLog.className = 'flex-1 py-2 rounded-xl font-fredoka text-xs font-bold transition bg-white text-indigo-700 shadow-xs';
-        btnReg.className = 'flex-1 py-2 rounded-xl font-fredoka text-xs font-bold transition text-slate-600 hover:text-indigo-600';
-        formLog.classList.remove('hidden');
-        formReg.classList.add('hidden');
-      } else {
-        btnReg.className = 'flex-1 py-2 rounded-xl font-fredoka text-xs font-bold transition bg-white text-indigo-700 shadow-xs';
-        btnLog.className = 'flex-1 py-2 rounded-xl font-fredoka text-xs font-bold transition text-slate-600 hover:text-indigo-600';
-        formReg.classList.remove('hidden');
-        formLog.classList.add('hidden');
-      }
-    }
-
-    function handleLoginSubmit(e) {
-      e.preventDefault();
-      const exp = document.getElementById('loginExpediente').value.trim();
-      if (exp.length !== 8) {
-        showFeedback(false, "El expediente debe tener exactamente 8 dígitos.");
-        return;
-      }
-
-      if (loadStudentData(exp)) {
-        closeStudentModal();
-        showFeedback(true, `Bienvenido de vuelta, ${currentStudent.nombre}.`);
-      } else {
-        switchAuthTab('register');
-        document.getElementById('regExpediente').value = exp;
-        showFeedback(false, "Expediente nuevo. Completa tus datos para registrarlo.");
-      }
-    }
-
-    function handleRegisterSubmit(e) {
-      e.preventDefault();
-      const exp = document.getElementById('regExpediente').value.trim();
-      const pat = document.getElementById('regPaterno').value.trim();
-      const mat = document.getElementById('regMaterno').value.trim();
-      const nom = document.getElementById('regNombres').value.trim();
-      const grp = document.getElementById('regGrupo').value.trim();
-
-      if (exp.length !== 8) {
-        showFeedback(false, "El expediente debe constar de 8 dígitos.");
-        return;
-      }
-
-      currentStudent = {
-        expediente: exp,
-        nombre: nom,
-        paterno: pat,
-        materno: mat,
-        grupo: grp,
-        avatar: selectedAvatar,
-        puntos: 0,
-        streak: 0,
-        solvedCount: 0,
-        topicStats: {
-          col_mul: { solved: 0, pts: 0 },
-          col_div: { solved: 0, pts: 0 },
-          primes: { solved: 0, pts: 0 },
-          mcd: { solved: 0, pts: 0 },
-          mcm: { solved: 0, pts: 0 },
-          frac_eq: { solved: 0, pts: 0 },
-          frac_add: { solved: 0, pts: 0 },
-          frac_mul: { solved: 0, pts: 0 },
-          frac_div: { solved: 0, pts: 0 },
-        }
-      };
-
-      saveStudentData();
-      updateUserUI();
-      closeStudentModal();
-      showFeedback(true, `¡Cuenta creada con éxito! Bienvenido(a) ${nom}.`);
-    }
-
-    function renderAvatarSelector() {
-      const el = document.getElementById('avatarSelector');
-      if (!el) return;
-      el.innerHTML = AVATARS.map(av => `
-        <button type="button" onclick="selectAvatar('${av}')" class="avatar-option p-2 rounded-xl text-xl hover:bg-white transition ${selectedAvatar === av ? 'bg-white shadow-xs border border-indigo-200 scale-110' : 'opacity-70'}">
-          ${av}
-        </button>
-      `).join('');
-    }
-
-    function selectAvatar(av) {
-      selectedAvatar = av;
-      renderAvatarSelector();
-    }
-
-    /* ==============================================================
-       9. INICIALIZACIÓN GENERAL AL CARGAR LA PÁGINA
-       ============================================================== */
-    window.addEventListener('DOMContentLoaded', () => {
-      // Cargar último expediente guardado o usar predeterminado
-      const lastExp = localStorage.getItem('mathstep_last_expediente');
-      if (lastExp) {
-        loadStudentData(lastExp);
-      } else {
-        updateUserUI();
-      }
-
-      renderAvatarSelector();
-      selectTopic('col_mul');
-
-      if (window.lucide) lucide.createIcons();
-    });
-  </script>
+        document.getElementById('answerInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') verifyStep();
+        });
+
+        window.onload = () => {
+            if (studentData.expediente === '') document.getElementById('loginModal').classList.remove('hidden');
+            else { actualizarUIEstudiante(); initProblem(); }
+        };
+    </script>
 </body>
 </html>
