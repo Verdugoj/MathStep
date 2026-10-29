@@ -252,10 +252,10 @@
     </header>
 
     <!-- Main Layout -->
-    <main class="flex-1 max-w-7xl mx-auto w-full px-4 py-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+    <main class="flex-1 max-w-7xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-6 flex flex-col lg:grid lg:grid-cols-4 gap-4 sm:gap-6">
         
         <!-- Sidebar: Menu -->
-        <aside class="lg:col-span-1 space-y-6">
+        <aside class="order-2 lg:order-1 lg:col-span-1 space-y-4 sm:space-y-6">
             
             <!-- Selector de Dificultad -->
             <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex justify-between relative overflow-hidden">
@@ -316,7 +316,7 @@
         </aside>
 
         <!-- Problem Area -->
-        <section class="lg:col-span-3 flex flex-col gap-4">
+        <section class="order-1 lg:order-2 lg:col-span-3 flex flex-col gap-4">
             
             <!-- Tarjeta de Instrucción -->
             <div class="bg-indigo-50 border border-indigo-100 p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
@@ -371,8 +371,8 @@
 
             <!-- Panel de Entrada -->
             <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4" id="inputContainer">
-                <input type="number" id="answerInput" class="flex-1 bg-slate-50 border-2 border-slate-200 rounded-2xl px-6 py-4 text-2xl font-bold text-center text-indigo-900 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-300 placeholder:text-lg" placeholder="Escribe el número aquí..." autocomplete="off">
-                <button onclick="verifyStep()" id="verifyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-10 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 sm:w-auto w-full active:scale-95">
+                <input type="number" inputmode="numeric" pattern="[0-9]*" id="answerInput" class="flex-1 bg-slate-50 border-2 border-slate-200 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-xl sm:text-2xl font-bold text-center text-indigo-900 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-300 placeholder:text-base sm:placeholder:text-lg" placeholder="Escribe el número aquí..." autocomplete="off">
+                <button onclick="verifyStep()" id="verifyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 sm:w-auto w-full active:scale-95">
                     Avanzar <i data-lucide="check" class="w-6 h-6"></i>
                 </button>
             </div>
@@ -734,25 +734,25 @@
 
             // RENDER: MULTIPLICACIÓN
             if (currentState.topic === 'col_mul') {
-                html += `<div class="flex flex-col items-end font-mono text-5xl font-bold tracking-widest relative mt-8">`;
+                html += `<div class="flex flex-col items-end font-mono text-4xl sm:text-5xl font-bold tracking-widest relative mt-4 sm:mt-8">`;
                 
                 // Acarreos Animados
-                html += `<div class="flex h-10 mb-2 text-2xl">`;
+                html += `<div class="flex h-8 sm:h-10 mb-2 text-lg sm:text-2xl">`;
                 for(let i=0; i<d.carries.length; i++) {
-                    html += `<div class="w-12 text-center text-amber-500 font-black">${d.carries[i] > 0 ? `<span class="animate-pop-in inline-block bg-amber-100 rounded-full px-1 border border-amber-300">⬆️+${d.carries[i]}</span>` : '&nbsp;'}</div>`;
+                    html += `<div class="w-8 sm:w-12 text-center text-amber-500 font-black">${d.carries[i] > 0 ? `<span class="animate-pop-in inline-block bg-amber-100 rounded-full px-1 border border-amber-300">⬆️+${d.carries[i]}</span>` : '&nbsp;'}</div>`;
                 }
                 html += `</div>`;
                 
                 // Superior
-                html += `<div class="flex"><div class="w-12">&nbsp;</div>`;
-                for(let char of d.n1) html += `<div class="w-12 text-center">${char}</div>`;
+                html += `<div class="flex"><div class="w-8 sm:w-12">&nbsp;</div>`;
+                for(let char of d.n1) html += `<div class="w-8 sm:w-12 text-center">${char}</div>`;
                 html += `</div>`;
                 
                 // Inferior
                 html += `<div class="flex border-b-4 border-slate-800 pb-2 mb-2 relative">`;
-                html += `<div class="absolute left-[-2rem] text-indigo-600 top-1">×</div>`;
-                for(let i=0; i<d.n1.length + 1 - d.n2.length; i++) html += `<div class="w-12">&nbsp;</div>`;
-                for(let char of d.n2) html += `<div class="w-12 text-center text-indigo-900">${char}</div>`;
+                html += `<div class="absolute left-[-1.5rem] sm:left-[-2rem] text-indigo-600 top-1">×</div>`;
+                for(let i=0; i<d.n1.length + 1 - d.n2.length; i++) html += `<div class="w-8 sm:w-12">&nbsp;</div>`;
+                for(let char of d.n2) html += `<div class="w-8 sm:w-12 text-center text-indigo-900">${char}</div>`;
                 html += `</div>`;
 
                 // Filas parciales
@@ -762,9 +762,9 @@
                         let val = rowArr[i];
                         let isActive = (stepDef && stepDef.type === 'mul_digit' && stepDef.rowIdx === rowIdx && (stepDef.colIdx === i || (stepDef.colIdx === -1 && i===0)));
                         
-                        if (val !== '') html += `<div class="w-12 text-center text-emerald-600 glow-success animate-pop-in">${val}</div>`;
-                        else if (isActive) html += `<div class="w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
-                        else html += `<div class="w-12 text-center text-transparent">_</div>`;
+                        if (val !== '') html += `<div class="w-8 sm:w-12 text-center text-emerald-600 glow-success animate-pop-in">${val}</div>`;
+                        else if (isActive) html += `<div class="w-8 sm:w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
+                        else html += `<div class="w-8 sm:w-12 text-center text-transparent">_</div>`;
                     }
                     html += `</div>`;
                 });
@@ -775,9 +775,9 @@
                     for(let i=0; i<d.finalAns.length; i++) {
                         let val = d.finalAns[i];
                         let isActive = (stepDef && stepDef.type === 'add_final' && stepDef.colIdx === i);
-                        if (val !== '') html += `<div class="w-12 text-center text-emerald-600 font-black animate-pop-in">${val}</div>`;
-                        else if (isActive) html += `<div class="w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
-                        else html += `<div class="w-12 text-center text-transparent">_</div>`;
+                        if (val !== '') html += `<div class="w-8 sm:w-12 text-center text-emerald-600 font-black animate-pop-in">${val}</div>`;
+                        else if (isActive) html += `<div class="w-8 sm:w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
+                        else html += `<div class="w-8 sm:w-12 text-center text-transparent">_</div>`;
                     }
                     html += `</div>`;
                 }
@@ -786,101 +786,101 @@
             
             // RENDER: DIVISIÓN CASITA
             else if (currentState.topic === 'col_div') {
-                html += `<div class="flex flex-col items-center font-mono text-4xl font-bold">`;
+                html += `<div class="flex flex-col items-center font-mono text-3xl sm:text-4xl font-bold">`;
                 
                 // Cociente Arriba
-                html += `<div class="flex ml-12 mb-1">`;
+                html += `<div class="flex ml-8 sm:ml-12 mb-1">`;
                 for(let i=0; i<d.qArr.length; i++) {
                     let isActive = (stepDef && stepDef.type === 'quo' && stepDef.qIdx === i);
-                    if (d.qArr[i] !== '') html += `<div class="w-12 text-center text-emerald-600 glow-success animate-pop-in">${d.qArr[i]}</div>`;
-                    else if (isActive) html += `<div class="w-12 text-center text-indigo-700 bg-indigo-50 rounded-lg target-highlight">?</div>`;
-                    else html += `<div class="w-12 text-center text-transparent">_</div>`;
+                    if (d.qArr[i] !== '') html += `<div class="w-8 sm:w-12 text-center text-emerald-600 glow-success animate-pop-in">${d.qArr[i]}</div>`;
+                    else if (isActive) html += `<div class="w-8 sm:w-12 text-center text-indigo-700 bg-indigo-50 rounded-lg target-highlight">?</div>`;
+                    else html += `<div class="w-8 sm:w-12 text-center text-transparent">_</div>`;
                 }
                 html += `</div>`;
                 
                 // Casita
                 html += `<div class="flex items-center">`;
-                html += `<div class="pr-3 text-slate-700">${d.div}</div>`;
-                html += `<div class="border-l-4 border-t-4 border-slate-800 pl-2 pt-1 flex">`;
-                for(let char of d.dividend) html += `<div class="w-12 text-center text-slate-800">${char}</div>`;
+                html += `<div class="pr-2 sm:pr-3 text-slate-700">${d.div}</div>`;
+                html += `<div class="border-l-4 border-t-4 border-slate-800 pl-1 sm:pl-2 pt-1 flex">`;
+                for(let char of d.dividend) html += `<div class="w-8 sm:w-12 text-center text-slate-800">${char}</div>`;
                 html += `</div></div>`;
 
                 // Residuos y Restas
-                html += `<div class="flex flex-col w-full ml-12 text-2xl text-slate-500 items-start pl-[${d.curDivVal.toString().length * 1.5}rem]">`;
+                html += `<div class="flex flex-col w-full ml-8 sm:ml-12 text-xl sm:text-2xl text-slate-500 items-start pl-[${d.curDivVal.toString().length * 1.5}rem]">`;
                 d.residues.forEach((r, idx) => {
                     html += `<div class="text-rose-500 animate-pop-in mt-1">-${r.sub}</div>`;
-                    html += `<div class="border-t-2 border-slate-400 text-emerald-600 font-bold mb-2 w-16 text-right">${r.rem}</div>`;
+                    html += `<div class="border-t-2 border-slate-400 text-emerald-600 font-bold mb-2 w-12 sm:w-16 text-right">${r.rem}</div>`;
                 });
                 
                 if (stepDef && stepDef.type === 'rem') {
                     html += `<div class="text-rose-500 mt-1">-${stepDef.sub}</div>`;
-                    html += `<div class="border-t-2 border-slate-400 text-indigo-700 bg-indigo-50 px-4 py-1 rounded-xl target-highlight w-auto mt-1">Resta = ?</div>`;
+                    html += `<div class="border-t-2 border-slate-400 text-indigo-700 bg-indigo-50 px-2 sm:px-4 py-1 rounded-xl target-highlight w-auto mt-1">Resta = ?</div>`;
                 }
                 html += `</div></div>`;
             }
 
             // RENDER: FACTORES PRIMOS Y MCD/MCM (Mismo formato escalera)
             else if (currentState.topic === 'primos' || currentState.topic === 'mcd' || currentState.topic === 'mcm') {
-                if (d.title) html += `<div class="text-xl font-bold text-slate-400 mb-6 bg-slate-100 px-4 py-1 rounded-full">${d.title}</div>`;
+                if (d.title) html += `<div class="text-lg sm:text-xl font-bold text-slate-400 mb-4 sm:mb-6 bg-slate-100 px-4 py-1 rounded-full">${d.title}</div>`;
                 
-                html += `<div class="flex font-mono text-4xl font-bold bg-white p-6 rounded-3xl border-2 border-slate-100 shadow-sm">`;
+                html += `<div class="flex font-mono text-3xl sm:text-4xl font-bold bg-white p-4 sm:p-6 rounded-3xl border-2 border-slate-100 shadow-sm w-full max-w-full overflow-x-auto justify-center">`;
                 
                 // Columna(s) Izquierda
-                html += `<div class="flex flex-col items-end pr-6 border-r-4 border-slate-800">`;
+                html += `<div class="flex flex-col items-end pr-4 sm:pr-6 border-r-4 border-slate-800">`;
                 d.grid.forEach((row, i) => {
                     let isActQ1 = (stepDef && (stepDef.type === 'quotient' || stepDef.type === 'q1') && stepDef.row === i);
                     let isActQ2 = (stepDef && stepDef.type === 'q2' && stepDef.row === i);
                     
-                    html += `<div class="py-2 flex gap-6 items-center">`;
+                    html += `<div class="py-2 flex gap-3 sm:gap-6 items-center">`;
                     if (row.left !== undefined) {
-                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.left}</div>`;
+                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.left}</div>`;
                     } else {
-                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c1}</div>`;
-                        html += `<div class="text-slate-300 text-2xl">-</div>`;
-                        html += isActQ2 ? `<div class="text-indigo-700 target-highlight px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c2}</div>`;
+                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c1}</div>`;
+                        html += `<div class="text-slate-300 text-xl sm:text-2xl">-</div>`;
+                        html += isActQ2 ? `<div class="text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c2}</div>`;
                     }
                     html += `</div>`;
                 });
                 html += `</div>`;
                 
                 // Columna Derecha (Primos)
-                html += `<div class="flex flex-col items-center pl-6">`;
+                html += `<div class="flex flex-col items-center pl-4 sm:pl-6">`;
                 d.grid.forEach((row, i) => {
                     let pVal = row.right || row.p;
                     let isActive = (stepDef && stepDef.type === 'prime' && stepDef.row === i);
                     if (pVal !== '?' && pVal !== '') html += `<div class="py-2 text-emerald-600 glow-success animate-pop-in">${pVal}</div>`;
-                    else if (isActive) html += `<div class="py-2 text-indigo-700 target-highlight px-3 rounded-lg">?</div>`;
+                    else if (isActive) html += `<div class="py-2 text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>`;
                     else if (pVal === '') html += `<div class="py-2 text-transparent">_</div>`;
                 });
                 html += `</div></div>`;
                 
                 if (stepDef && stepDef.type === 'final') {
-                    html += `<div class="mt-8 text-3xl font-bold text-indigo-700 bg-indigo-50 px-8 py-3 rounded-2xl target-highlight shadow-inner">Resultado = ?</div>`;
+                    html += `<div class="mt-4 sm:mt-8 text-xl sm:text-3xl font-bold text-indigo-700 bg-indigo-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl target-highlight shadow-inner text-center">Resultado = ?</div>`;
                 }
             }
 
             // RENDER: FRACCIONES
             else if (currentState.topic.startsWith('frac_')) {
-                html += `<div class="flex items-center gap-6 text-5xl font-bold font-fredoka text-slate-800 mt-4">`;
+                html += `<div class="flex items-center gap-2 sm:gap-6 text-3xl sm:text-5xl font-bold font-fredoka text-slate-800 mt-4 w-full justify-center overflow-x-auto pb-4">`;
                 html += `<div class="math-frac"><span>${d.n1}</span><div class="math-frac-line"></div><span>${d.d1}</span></div>`;
                 
                 let op = '=';
                 if(currentState.topic==='frac_sum') op = '+';
                 if(currentState.topic==='frac_mul') op = '×';
                 if(currentState.topic==='frac_div') op = '÷';
-                html += `<div class="text-indigo-600 bg-indigo-50 w-12 h-12 flex items-center justify-center rounded-full text-3xl">${op}</div>`;
+                html += `<div class="text-indigo-600 bg-indigo-50 w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center rounded-full text-xl sm:text-3xl flex-shrink-0">${op}</div>`;
                 
                 if (currentState.topic !== 'frac_eq') {
                     html += `<div class="math-frac"><span>${d.n2}</span><div class="math-frac-line"></div><span>${d.d2}</span></div>`;
-                    html += `<div class="text-indigo-600 text-3xl">=</div>`;
+                    html += `<div class="text-indigo-600 text-xl sm:text-3xl flex-shrink-0">=</div>`;
                 }
 
                 let numDone = currentState.stepIndex > (currentState.topic==='frac_sum'? 1:0);
                 let denDone = currentState.stepIndex > 0;
                 if(currentState.topic === 'frac_eq') { numDone = true; denDone = true; } // Solo 1 paso
                 
-                let fNum = numDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.nf || d.n2}</span>` : (stepDef && (stepDef.type==='num' || stepDef.type==='eq') ? `<span class="target-highlight px-4 rounded-xl text-indigo-700 min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
-                let fDen = denDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.df || d.d2}</span>` : (stepDef && stepDef.type==='den' ? `<span class="target-highlight px-4 rounded-xl text-indigo-700 min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                let fNum = numDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.nf || d.n2}</span>` : (stepDef && (stepDef.type==='num' || stepDef.type==='eq') ? `<span class="target-highlight px-2 sm:px-4 rounded-xl text-indigo-700 min-w-[2.5rem] sm:min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                let fDen = denDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.df || d.d2}</span>` : (stepDef && stepDef.type==='den' ? `<span class="target-highlight px-2 sm:px-4 rounded-xl text-indigo-700 min-w-[2.5rem] sm:min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
                 
                 html += `<div class="math-frac"><span>${fNum}</span><div class="math-frac-line"></div><span>${fDen}</span></div>`;
                 html += `</div>`;
