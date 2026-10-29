@@ -30,41 +30,60 @@
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'mathstep-local-dev';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-            apiKey: "dummy-key",
-            projectId: "dummy-project",
+        // Configuración real de tu proyecto en Firebase
+        const firebaseConfig = {
+            apiKey: "AIzaSyBXLeHfvxcVo-lvNpEHjf0vjfgjRJp4aYg",
+            authDomain: "mathstep-escuela.firebaseapp.com",
+            projectId: "mathstep-escuela",
+            storageBucket: "mathstep-escuela.firebasestorage.app",
+            messagingSenderId: "447399870290",
+            appId: "1:447399870290:web:695f170cf9fcd5ea64848b"
         };
 
-        let db, auth, userAuth = null;
+        const appId = 'mathstep-escuela';
+
+        let db, auth;
+        window.isCloudReady = false;
+
         try {
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
             
             signInAnonymously(auth).then((cred) => {
-                userAuth = cred.user;
-                console.log("Conectado a la nube de forma segura.");
-            }).catch(e => console.log("Modo local activado.", e));
+                window.isCloudReady = true;
+                console.log("✅ Conectado a la Nube (Firebase) correctamente.");
+            }).catch(e => {
+                if (e.code === 'auth/configuration-not-found') {
+                    console.warn("⚠️ FIREBASE AUTH APAGADO: Habilita 'Anónimo' en Firebase. Usando almacenamiento local por ahora.");
+                } else {
+                    console.warn("⚠️ Error de permisos en la nube. Usando almacenamiento local por ahora.", e);
+                }
+            });
         } catch(e) {
-            console.log("Firebase init skipped (offline mode).");
+            console.warn("⚠️ No se pudo iniciar Firebase. Revisa la configuración. Usando almacenamiento local.", e);
         }
 
         window.cloudDB = {
             async saveProgress(expediente, data) {
-                if (!db || !userAuth) return;
+                if (!window.isCloudReady || !db) return;
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
                     await setDoc(docRef, data, { merge: true });
-                } catch(e) { console.error("Error guardando:", e); }
+                    console.log("💾 Progreso guardado en internet.");
+                } catch(e) { console.warn("Error guardando en la nube:", e); }
             },
             async loadProgress(expediente) {
-                if (!db || !userAuth) return null;
+                if (!window.isCloudReady || !db) return null;
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
                     const docSnap = await getDoc(docRef);
-                    return docSnap.exists() ? docSnap.data() : null;
-                } catch(e) { return null; }
+                    if (docSnap.exists()) {
+                        console.log("☁️ Datos descargados de internet.");
+                        return docSnap.data();
+                    }
+                    return null;
+                } catch(e) { console.warn("Error leyendo de la nube:", e); return null; }
             }
         };
     </script>
@@ -99,6 +118,8 @@
                         console.log("Service Worker viejo eliminado para limpiar caché.");
                     });
                 }
+            }).catch(function(error) {
+                console.warn("⚠️ Entorno seguro/sandbox: No se requiere limpiar Service Workers aquí.", error);
             });
         }
     </script>
