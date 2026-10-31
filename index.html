@@ -2,35 +2,26 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <!-- Control de Caché estricto -->
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     
-    <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#4F46E5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>MathStep Cloud - Matemáticas Dinámicas</title>
     
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Fuentes -->
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@700&display=swap" rel="stylesheet">
-    
-    <!-- Iconos y Utilidades -->
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
-    <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Configuración real de tu proyecto en Firebase
         const firebaseConfig = {
             apiKey: "AIzaSyBXLeHfvxcVo-lvNpEHjf0vjfgjRJp4aYg",
             authDomain: "mathstep-escuela.firebaseapp.com",
@@ -54,14 +45,10 @@
                 window.isCloudReady = true;
                 console.log("✅ Conectado a la Nube (Firebase) correctamente.");
             }).catch(e => {
-                if (e.code === 'auth/configuration-not-found') {
-                    console.warn("⚠️ FIREBASE AUTH APAGADO: Habilita 'Anónimo' en Firebase. Usando almacenamiento local por ahora.");
-                } else {
-                    console.warn("⚠️ Error de permisos en la nube. Usando almacenamiento local por ahora.", e);
-                }
+                console.warn("⚠️ Error auth Firebase. Usando almacenamiento local.", e);
             });
         } catch(e) {
-            console.warn("⚠️ No se pudo iniciar Firebase. Revisa la configuración. Usando almacenamiento local.", e);
+            console.warn("⚠️ No se pudo iniciar Firebase. Usando almacenamiento local.", e);
         }
 
         window.cloudDB = {
@@ -70,25 +57,28 @@
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
                     await setDoc(docRef, data, { merge: true });
-                    console.log("💾 Progreso guardado en internet.");
-                } catch(e) { console.warn("Error guardando en la nube:", e); }
+                } catch(e) { console.warn("Error guardando nube:", e); }
             },
             async loadProgress(expediente) {
                 if (!window.isCloudReady || !db) return null;
                 try {
                     const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
                     const docSnap = await getDoc(docRef);
-                    if (docSnap.exists()) {
-                        console.log("☁️ Datos descargados de internet.");
-                        return docSnap.data();
-                    }
-                    return null;
-                } catch(e) { console.warn("Error leyendo de la nube:", e); return null; }
+                    return docSnap.exists() ? docSnap.data() : null;
+                } catch(e) { return null; }
+            },
+            async getLeaderboard() {
+                if (!window.isCloudReady || !db) return [];
+                try {
+                    const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'students'));
+                    let students = [];
+                    snap.forEach(doc => { students.push(doc.data()); });
+                    return students;
+                } catch(e) { return []; }
             }
         };
     </script>
 
-    <!-- Generación del PWA Manifest Dinámico (Icono de Matemáticas) -->
     <script>
         const manifestStr = `{
             "name": "MathStep Cloud",
@@ -109,107 +99,70 @@
         document.write(`<link rel="manifest" href="${manifestURL}">`);
     </script>
 
-    <!-- Registro del Service Worker Antiguo para DESTRUIRLO y limpiar caché -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
-                    registration.unregister().then(function(boolean) {
-                        console.log("Service Worker viejo eliminado para limpiar caché.");
-                    });
-                }
-            }).catch(function(error) {
-                console.warn("⚠️ Entorno seguro/sandbox: No se requiere limpiar Service Workers aquí.", error);
-            });
-        }
-    </script>
-
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #F8FAFC; }
         .font-fredoka { font-family: 'Fredoka', sans-serif; }
         .font-mono { font-family: 'JetBrains Mono', monospace; }
         
-        @keyframes popIn {
-            0% { transform: scale(0.8); opacity: 0; }
-            70% { transform: scale(1.1); }
-            100% { transform: scale(1); opacity: 1; }
-        }
+        @keyframes popIn { 0% { transform: scale(0.8); opacity: 0; } 70% { transform: scale(1.1); } 100% { transform: scale(1); opacity: 1; } }
         .animate-pop-in { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
-        @keyframes pulse-soft {
-            0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.3); }
-            50% { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); }
-        }
-        .target-highlight {
-            animation: pulse-soft 1.5s infinite;
-            border: 2px solid #4F46E5 !important;
-            background-color: #EEF2FF !important;
-            color: #4F46E5 !important;
-            box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-        }
+        @keyframes pulse-soft { 0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.3); } 50% { transform: scale(1.03); box-shadow: 0 0 0 6px rgba(79, 70, 229, 0); } }
+        .target-highlight { animation: pulse-soft 1.5s infinite; border: 2px solid #4F46E5 !important; background-color: #EEF2FF !important; color: #4F46E5 !important; box-shadow: inset 0 2px 4px rgba(0,0,0,0.05); }
 
-        @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-4px); }
-            75% { transform: translateX(4px); }
-        }
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 75% { transform: translateX(4px); } }
         .animate-shake { animation: shake 0.3s ease-in-out; }
 
-        input[type=number]::-webkit-inner-spin-button, 
-        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number]::-webkit-inner-spin-button, input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         input[type=number] { -moz-appearance: textfield; }
         
-        .math-frac { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; vertical-align: middle; }
+        .math-frac { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; vertical-align: middle; padding: 0 4px; }
         .math-frac-line { width: 100%; height: 3px; background-color: currentColor; margin: 4px 0; border-radius: 2px; }
         
-        .glow-success {
-            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
-            color: #10B981 !important;
-        }
-
+        .glow-success { text-shadow: 0 0 10px rgba(16, 185, 129, 0.5); color: #10B981 !important; }
         .slide-up { animation: slideUp 0.4s ease-out forwards; }
         @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="text-slate-800 antialiased min-h-screen flex flex-col">
 
-    <!-- Modal de Login / Registro en la Nube -->
     <div id="loginModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-pop-in">
             <div class="bg-gradient-to-br from-indigo-600 to-violet-700 p-6 text-center relative overflow-hidden">
-                <div class="absolute inset-0 opacity-10 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white to-transparent"></div>
-                <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white relative z-10 backdrop-blur-md border border-white/20">
+                <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white relative z-10 backdrop-blur-md">
                     <i data-lucide="cloud" class="w-8 h-8"></i>
                 </div>
                 <h2 class="font-fredoka text-2xl font-bold text-white relative z-10">Acceso a la Nube</h2>
-                <p class="text-indigo-100 text-sm mt-1 relative z-10">Guarda tu progreso desde cualquier dispositivo</p>
+                <p class="text-indigo-100 text-sm mt-1 relative z-10" id="loginSubtitle">Guarda tu progreso desde cualquier dispositivo</p>
             </div>
             <div class="p-6 space-y-4">
                 <div id="loginForm">
                     <label class="block text-sm font-bold text-slate-700 mb-1">Expediente (8 dígitos)</label>
-                    <input type="text" id="expedienteInput" maxlength="8" pattern="[0-9]{8}" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-lg font-bold focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 focus:outline-none transition-all" placeholder="Ej. 12345678">
+                    <input type="text" id="expedienteInput" maxlength="8" pattern="[0-9]{8}" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-4 py-3 text-lg font-bold focus:border-indigo-500 focus:outline-none" placeholder="Ej. 12345678">
                 </div>
                 
                 <div id="registerForm" class="hidden space-y-4 slide-up">
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Ap. Paterno</label>
-                            <input type="text" id="apPaternoInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                    <div id="formFields" class="space-y-4">
+                        <div class="grid grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Ap. Paterno</label>
+                                <input type="text" id="apPaternoInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Ap. Materno</label>
+                                <input type="text" id="apMaternoInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                            </div>
                         </div>
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Ap. Materno</label>
-                            <input type="text" id="apMaternoInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre(s)</label>
+                            <input type="text" id="nombreInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Grupo</label>
+                            <input type="text" id="grupoInput" placeholder="Ej. 6-A" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
                         </div>
                     </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Nombre(s)</label>
-                        <input type="text" id="nombreInput" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 mb-1 uppercase">Grupo</label>
-                        <input type="text" id="grupoInput" placeholder="Ej. 6-A" class="w-full bg-slate-50 border-2 border-slate-200 rounded-xl px-3 py-2 font-medium focus:border-indigo-500 focus:outline-none">
-                    </div>
-                    <div>
+                    <div id="avatarSection">
                         <label class="block text-xs font-bold text-slate-500 mb-2 uppercase">Elige tu Avatar</label>
                         <div class="flex gap-2 justify-between" id="avatarSelector">
                             <div class="cursor-pointer text-2xl p-2 rounded-xl bg-indigo-100 border-2 border-indigo-500" onclick="selectAvatar(this, '🧑‍🎓')">🧑‍🎓</div>
@@ -221,14 +174,27 @@
                     </div>
                 </div>
 
-                <button onclick="handleAuthSubmit()" id="authBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-lg py-3 rounded-xl transition-all shadow-lg shadow-indigo-200 mt-2">
+                <button onclick="handleAuthSubmit()" id="authBtn" class="w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 text-white font-bold text-lg py-3 rounded-xl shadow-lg mt-2">
                     Ingresar a la Nube
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Navbar -->
+    <div id="leaderboardModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
+        <div class="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden animate-pop-in flex flex-col max-h-[80vh]">
+            <div class="bg-gradient-to-br from-amber-500 to-orange-500 p-6 text-center relative overflow-hidden flex-shrink-0">
+                <button onclick="document.getElementById('leaderboardModal').classList.add('hidden')" class="absolute top-4 right-4 bg-white/20 hover:bg-white/30 text-white p-2 rounded-full backdrop-blur-sm"><i data-lucide="x" class="w-5 h-5"></i></button>
+                <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white relative z-10 backdrop-blur-md text-3xl">🏆</div>
+                <h2 class="font-fredoka text-2xl font-bold text-white relative z-10">Top 5 del Grupo</h2>
+                <p class="text-orange-100 font-medium mt-1 relative z-10" id="lbGroupTitle">Cargando...</p>
+            </div>
+            <div class="p-6 overflow-y-auto space-y-3" id="leaderboardList">
+                <div class="text-center py-4 text-slate-500 font-medium">Conectando a la base de datos...</div>
+            </div>
+        </div>
+    </div>
+
     <header class="bg-white shadow-sm sticky top-0 z-50 border-b border-indigo-100">
         <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3">
@@ -238,218 +204,250 @@
                 <h1 class="font-fredoka text-xl sm:text-2xl font-bold text-slate-800 tracking-tight hidden sm:block">MathStep</h1>
             </div>
             
-            <div class="flex items-center gap-3">
-                <div class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 shadow-inner">
+            <div class="flex items-center gap-2 sm:gap-3">
+                <div onclick="showLeaderboard()" class="flex items-center gap-1 sm:gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 cursor-pointer hover:bg-indigo-100 active:scale-95 transition-all">
+                    <span class="text-indigo-500"><i data-lucide="trophy" class="w-5 h-5"></i></span>
+                    <span class="font-bold text-indigo-700 hidden sm:block">Top 5</span>
+                </div>
+                <div class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
                     <span class="text-amber-500"><i data-lucide="medal" class="w-5 h-5"></i></span>
                     <span class="font-bold text-amber-700" id="totalPoints">0 pts</span>
                 </div>
-                <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-200 transition-colors" onclick="cerrarSesion()">
+                <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-200" onclick="cerrarSesion()">
                     <span class="text-xl" id="userAvatarDisplay">🧑‍🎓</span>
-                    <span class="hidden sm:block font-medium text-sm text-slate-700 truncate max-w-[120px]" id="userNameDisplay">...</span>
+                    <span class="hidden sm:block font-medium text-sm text-slate-700 truncate" id="userNameDisplay">...</span>
                 </div>
             </div>
         </div>
     </header>
 
-    <!-- Main Layout -->
     <main class="flex-1 max-w-7xl mx-auto w-full px-2 sm:px-4 py-4 sm:py-6 flex flex-col lg:grid lg:grid-cols-4 gap-4 sm:gap-6">
         
-        <!-- Sidebar: Menu -->
         <aside class="order-2 lg:order-1 lg:col-span-1 space-y-4 sm:space-y-6">
-            
-            <!-- Selector de Dificultad -->
             <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-200 flex justify-between relative overflow-hidden">
                 <div id="diffBgSelector" class="absolute top-1.5 bottom-1.5 left-1.5 w-[31%] bg-green-100 border-2 border-green-200 rounded-xl transition-all duration-300 z-0"></div>
-                <button onclick="setDifficulty('facil')" id="diff-facil" class="flex-1 py-2 text-sm font-bold text-green-700 z-10 transition-colors">Fácil (+1)</button>
-                <button onclick="setDifficulty('medio')" id="diff-medio" class="flex-1 py-2 text-sm font-bold text-slate-500 z-10 transition-colors">Medio (+2)</button>
-                <button onclick="setDifficulty('reto')" id="diff-reto" class="flex-1 py-2 text-sm font-bold text-slate-500 z-10 transition-colors">Reto (+3)</button>
+                <button onclick="setDifficulty('facil')" id="diff-facil" class="flex-1 py-2 text-sm font-bold text-green-700 z-10">Fácil (+1)</button>
+                <button onclick="setDifficulty('medio')" id="diff-medio" class="flex-1 py-2 text-sm font-bold text-slate-500 z-10">Medio (+2)</button>
+                <button onclick="setDifficulty('reto')" id="diff-reto" class="flex-1 py-2 text-sm font-bold text-slate-500 z-10">Reto (+3)</button>
             </div>
 
-            <!-- Selector de Temas -->
             <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 overflow-y-auto max-h-[60vh] lg:max-h-none space-y-5">
-                
                 <div>
                     <h2 class="font-fredoka text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Aritmética Paso a Paso</h2>
                     <div class="space-y-1">
-                        <button onclick="setTopic('col_mul')" id="btn-col_mul" class="menu-btn active w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg text-white"><i data-lucide="x" class="w-4 h-4"></i></div> Multiplicar
-                        </button>
-                        <button onclick="setTopic('col_div')" id="btn-col_div" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="divide" class="w-4 h-4"></i></div> División Casita
-                        </button>
+                        <button onclick="setTopic('col_mul')" id="btn-col_mul" class="menu-btn active w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left bg-indigo-600 text-white"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-white/20"><i data-lucide="x" class="w-4 h-4"></i></div> Multiplicar</button>
+                        <button onclick="setTopic('col_div')" id="btn-col_div" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100"><i data-lucide="divide" class="w-4 h-4"></i></div> División Casita</button>
                     </div>
                 </div>
 
                 <div>
                     <h2 class="font-fredoka text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Teoría de Números</h2>
                     <div class="space-y-1">
-                        <button onclick="setTopic('primos')" id="btn-primos" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">🌱</div> Factores Primos
-                        </button>
-                        <button onclick="setTopic('mcd')" id="btn-mcd" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">🎯</div> MCD
-                        </button>
-                        <button onclick="setTopic('mcm')" id="btn-mcm" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">🚀</div> mcm
-                        </button>
+                        <button onclick="setTopic('primos')" id="btn-primos" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">🌱</div> Factores Primos</button>
+                        <button onclick="setTopic('mcd')" id="btn-mcd" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">🎯</div> MCD</button>
+                        <button onclick="setTopic('mcm')" id="btn-mcm" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">🚀</div> mcm</button>
                     </div>
                 </div>
 
                 <div>
                     <h2 class="font-fredoka text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mundo de Fracciones</h2>
                     <div class="space-y-1">
-                        <button onclick="setTopic('frac_eq')" id="btn-frac_eq" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg">⚖️</div> Equivalencias
-                        </button>
-                        <button onclick="setTopic('frac_sum')" id="btn-frac_sum" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="plus" class="w-4 h-4"></i></div> Suma / Resta
-                        </button>
-                        <button onclick="setTopic('frac_mul')" id="btn-frac_mul" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="x" class="w-4 h-4"></i></div> Multiplicar
-                        </button>
-                        <button onclick="setTopic('frac_div')" id="btn-frac_div" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left">
-                            <div class="w-8 h-8 rounded-lg flex items-center justify-center icon-bg"><i data-lucide="divide" class="w-4 h-4"></i></div> Dividir
-                        </button>
+                        <button onclick="setTopic('frac_eq')" id="btn-frac_eq" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">⚖️</div> Equivalencias</button>
+                        <button onclick="setTopic('frac_simp')" id="btn-frac_simp" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">✂️</div> Simplificar</button>
+                        <button onclick="setTopic('frac_sum')" id="btn-frac_sum" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">➕</div> Suma / Resta</button>
+                        <button onclick="setTopic('frac_mul')" id="btn-frac_mul" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100"><i data-lucide="x" class="w-4 h-4"></i></div> Multiplicar</button>
+                        <button onclick="setTopic('frac_div')" id="btn-frac_div" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100"><i data-lucide="divide" class="w-4 h-4"></i></div> Dividir</button>
+                        <button onclick="setTopic('frac_comb')" id="btn-frac_comb" class="menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600"><div class="icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100">🧮</div> Combinadas</button>
                     </div>
                 </div>
             </div>
         </aside>
 
-        <!-- Problem Area -->
         <section class="order-1 lg:order-2 lg:col-span-3 flex flex-col gap-4">
             
-            <!-- Tarjeta de Instrucción -->
             <div class="bg-indigo-50 border border-indigo-100 p-5 rounded-3xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 relative overflow-hidden">
-                <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-100 flex" id="stepProgressContainer">
-                    <div class="h-full bg-indigo-500 w-1/4 transition-all duration-300" id="stepProgressBar"></div>
-                </div>
+                <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-100 flex"><div class="h-full bg-indigo-500 w-1/4 transition-all duration-300" id="stepProgressBar"></div></div>
 
                 <div class="flex gap-4 items-center mt-2 sm:mt-0 w-full sm:w-auto">
-                    <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-200 flex-shrink-0" id="headerIcon">
-                        <i data-lucide="lightbulb" class="w-6 h-6"></i>
-                    </div>
+                    <div class="w-12 h-12 bg-indigo-600 text-white rounded-2xl flex items-center justify-center flex-shrink-0"><i data-lucide="lightbulb" class="w-6 h-6"></i></div>
                     <div class="flex-1">
                         <div class="flex items-center gap-2 mb-0.5">
                             <h3 class="font-fredoka text-lg font-bold text-indigo-900" id="instructionTitle">Paso 1</h3>
-                            <span id="currentDiffBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-indigo-200 text-indigo-800 uppercase tracking-wide">Fácil +1 pt</span>
+                            <span id="currentDiffBadge" class="text-[10px] font-bold px-2 py-0.5 rounded-md bg-green-100 text-green-800 uppercase tracking-wide border border-green-200">FÁCIL +1 PT</span>
                         </div>
                         <p class="text-indigo-700 text-sm leading-tight" id="instructionDesc">Cargando...</p>
                     </div>
                 </div>
                 
                 <div class="flex gap-2 w-full sm:w-auto justify-end mt-2 sm:mt-0">
-                    <div class="bg-orange-100 text-orange-600 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 border border-orange-200 shadow-sm whitespace-nowrap">
-                        🔥 Racha: <span id="streakCount">0</span>
-                    </div>
-                    <button onclick="initProblem()" class="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-slate-50 transition-colors flex items-center gap-1 shadow-sm whitespace-nowrap">
-                        <i data-lucide="refresh-cw" class="w-4 h-4"></i> Nuevo
-                    </button>
+                    <div class="bg-orange-100 text-orange-600 px-3 py-2 rounded-xl text-sm font-bold flex items-center gap-1 border border-orange-200"><i data-lucide="flame" class="w-4 h-4"></i> Racha: <span id="streakCount">0</span></div>
+                    <button onclick="initProblem()" class="bg-white border border-slate-200 text-slate-700 px-3 py-2 rounded-xl text-sm font-bold hover:bg-slate-50 flex items-center gap-1"><i data-lucide="refresh-cw" class="w-4 h-4"></i> Nuevo</button>
                 </div>
             </div>
 
-            <!-- Lienzo Matemático -->
             <div class="bg-white p-6 sm:p-10 rounded-3xl shadow-sm border border-slate-200 flex-1 flex flex-col items-center justify-center min-h-[350px] relative overflow-hidden">
+                <div id="mathCanvas" class="w-full flex flex-col items-center justify-center overflow-x-auto pb-4 text-slate-800 min-h-[250px] transition-all duration-300"></div>
                 
-                <div id="mathCanvas" class="w-full flex flex-col items-center justify-center overflow-x-auto pb-4 text-slate-800 min-h-[250px] transition-all duration-300">
-                    <!-- Contenido dinámico renderStep -->
-                </div>
-                
-                <!-- Mensaje Éxito -->
                 <div id="successMessage" class="hidden absolute inset-0 bg-white/95 backdrop-blur-sm flex items-center justify-center p-6 z-10">
                     <div class="bg-gradient-to-b from-emerald-50 to-white border-2 border-emerald-200 p-8 rounded-3xl text-center max-w-sm shadow-2xl animate-pop-in">
-                        <div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
-                            <i data-lucide="check-circle" class="w-12 h-12"></i>
-                        </div>
+                        <div class="w-24 h-24 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto mb-6"><i data-lucide="check-circle" class="w-12 h-12"></i></div>
                         <h2 class="font-fredoka text-3xl font-bold text-emerald-800 mb-2">¡Excelente!</h2>
-                        <p class="text-slate-600 font-medium mb-6">Problema resuelto correctamente.<br>Has ganado <span id="rewardText" class="font-bold text-emerald-600 text-xl">1</span> punto.</p>
-                        <button onclick="initProblem()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-8 rounded-2xl shadow-lg shadow-emerald-200/50 w-full transition-all flex justify-center items-center gap-2 transform hover:scale-[1.02]">
-                            Siguiente Ejercicio <i data-lucide="arrow-right" class="w-5 h-5"></i>
-                        </button>
+                        <p class="text-slate-600 font-medium mb-6">Problema resuelto.<br>Has ganado <span id="rewardText" class="font-bold text-emerald-600 text-xl">1</span> punto.</p>
+                        <button onclick="initProblem()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 px-8 rounded-2xl w-full flex justify-center items-center gap-2">Siguiente Ejercicio <i data-lucide="arrow-right" class="w-5 h-5"></i></button>
                     </div>
                 </div>
             </div>
 
-            <!-- Panel de Entrada -->
             <div class="bg-white p-4 rounded-3xl shadow-sm border border-slate-200 flex flex-col sm:flex-row gap-4" id="inputContainer">
-                <input type="number" inputmode="numeric" pattern="[0-9]*" id="answerInput" class="flex-1 bg-slate-50 border-2 border-slate-200 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-xl sm:text-2xl font-bold text-center text-indigo-900 focus:outline-none focus:border-indigo-500 focus:bg-white focus:ring-4 focus:ring-indigo-500/20 transition-all placeholder:text-slate-300 placeholder:text-base sm:placeholder:text-lg" placeholder="Escribe el número aquí..." autocomplete="off">
-                <button onclick="verifyStep()" id="verifyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl font-bold text-lg transition-all shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 sm:w-auto w-full active:scale-95">
-                    Avanzar <i data-lucide="check" class="w-6 h-6"></i>
-                </button>
+                <input type="number" inputmode="numeric" pattern="[0-9]*" id="answerInput" class="flex-1 bg-slate-50 border-2 border-slate-200 rounded-2xl px-4 sm:px-6 py-3 sm:py-4 text-xl sm:text-2xl font-bold text-center text-indigo-900 focus:outline-none focus:border-indigo-500" placeholder="Escribe el número aquí..." autocomplete="off">
+                <button onclick="verifyStep()" id="verifyBtn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 sm:px-10 py-3 sm:py-4 rounded-2xl font-bold text-lg flex items-center justify-center gap-2 sm:w-auto w-full active:scale-95">Avanzar <i data-lucide="check" class="w-6 h-6"></i></button>
             </div>
-
         </section>
     </main>
 
     <script>
-        // --- 1. CONFIGURACIÓN Y ESTADO ---
         lucide.createIcons();
         let selectedAvatar = '🧑‍🎓';
-        
-        let studentData = {
-            expediente: '', nombre: '', apPaterno: '', apMaterno: '', grupo: '', avatar: '🧑‍🎓',
-            puntos: 0, racha: 0, resueltos: 0, stats: {}
-        };
-        
-        let currentState = {
-            topic: 'col_mul', difficulty: 'facil',
-            steps: [], stepIndex: 0, data: {}
+        let studentData = { expediente: '', nombre: '', apPaterno: '', apMaterno: '', grupo: '', avatar: '🧑‍🎓', puntos: 0, racha: 0, resueltos: 0, stats: {} };
+        let currentState = { topic: 'col_mul', difficulty: 'facil', steps: [], stepIndex: 0, data: {} };
+
+        // ==============================================================
+        // LISTA DE ALUMNOS PRECARGADA (Edita o agrega aquí a tus alumnos)
+        // Formato: "EXPEDIENTE": { nombre: "...", apPaterno: "...", apMaterno: "...", grupo: "..." }
+        // ==============================================================
+        const alumnosListaMaestra = {
+            "12345678": { nombre: "Ana Sofía", apPaterno: "García", apMaterno: "López", grupo: "6-A" },
+            "87654321": { nombre: "Carlos", apPaterno: "Ruiz", apMaterno: "Mena", grupo: "6-B" },
+            "11111111": { nombre: "Estudiante", apPaterno: "De", apMaterno: "Prueba", grupo: "6-C" }
         };
 
-        // --- 2. GESTIÓN DE USUARIOS (Login/Registro) ---
         function selectAvatar(el, avatar) {
             selectedAvatar = avatar;
-            document.querySelectorAll('#avatarSelector div').forEach(d => {
-                d.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100';
-            });
+            document.querySelectorAll('#avatarSelector div').forEach(d => d.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100');
             el.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-indigo-100 border-2 border-indigo-500';
         }
 
         document.getElementById('expedienteInput').addEventListener('input', function(e) {
             const val = e.target.value;
-            const regForm = document.getElementById('registerForm');
-            const btn = document.getElementById('authBtn');
-            
-            // Simular búsqueda local rápida para mostrar u ocultar registro
             const isLocalKnown = localStorage.getItem('math_student_' + val) !== null;
             
-            if (val.length === 8 && !isLocalKnown) {
-                regForm.classList.remove('hidden');
-                btn.innerText = 'Registrar y Guardar en la Nube';
+            if (val.length === 8) {
+                document.getElementById('registerForm').classList.remove('hidden');
+                
+                // Si el alumno está en la lista maestra, no le pedimos nombre ni grupo, solo avatar.
+                if (alumnosListaMaestra[val] || isLocalKnown) {
+                    document.getElementById('formFields').classList.add('hidden');
+                    document.getElementById('loginSubtitle').innerText = alumnosListaMaestra[val] 
+                        ? `¡Hola ${alumnosListaMaestra[val].nombre}! Elige tu avatar.` 
+                        : '¡Bienvenido de vuelta!';
+                    document.getElementById('authBtn').innerText = 'Entrar a MathStep';
+                } else {
+                    // Si NO está en la lista, debe registrarse completo.
+                    document.getElementById('formFields').classList.remove('hidden');
+                    document.getElementById('loginSubtitle').innerText = 'Expediente nuevo. Completa tus datos.';
+                    document.getElementById('authBtn').innerText = 'Registrar y Guardar';
+                }
             } else {
-                regForm.classList.add('hidden');
-                btn.innerText = 'Ingresar a la Nube';
+                document.getElementById('registerForm').classList.add('hidden');
+                document.getElementById('loginSubtitle').innerText = 'Guarda tu progreso desde cualquier dispositivo';
+                document.getElementById('authBtn').innerText = 'Ingresar a la Nube';
             }
         });
 
         async function handleAuthSubmit() {
             const exp = document.getElementById('expedienteInput').value.trim();
             if (exp.length !== 8) { alert("El expediente debe tener 8 dígitos."); return; }
+            document.getElementById('authBtn').innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; lucide.createIcons();
 
-            const btn = document.getElementById('authBtn');
-            btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>';
-            lucide.createIcons();
-
-            let savedData = null;
-            if (window.cloudDB) savedData = await window.cloudDB.loadProgress(exp);
+            let savedData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
             if (!savedData) savedData = JSON.parse(localStorage.getItem('math_student_' + exp));
 
             if (savedData) {
                 studentData = savedData;
+                studentData.avatar = selectedAvatar; // Actualizar avatar si lo cambió
             } else {
-                studentData = {
-                    expediente: exp,
-                    apPaterno: document.getElementById('apPaternoInput').value.trim(),
-                    apMaterno: document.getElementById('apMaternoInput').value.trim(),
-                    nombre: document.getElementById('nombreInput').value.trim(),
-                    grupo: document.getElementById('grupoInput').value.trim(),
-                    avatar: selectedAvatar,
-                    puntos: 0, racha: 0, resueltos: 0, stats: {}
-                };
+                // Verificar si está en la lista maestra
+                const preloaded = alumnosListaMaestra[exp];
+                if (preloaded) {
+                    studentData = {
+                        expediente: exp, 
+                        nombre: preloaded.nombre, apPaterno: preloaded.apPaterno, 
+                        apMaterno: preloaded.apMaterno, grupo: preloaded.grupo, 
+                        avatar: selectedAvatar, puntos: 0, racha: 0, resueltos: 0, stats: {}
+                    };
+                } else {
+                    // Validación obligatoria si es nuevo y no está en lista
+                    let n = document.getElementById('nombreInput').value.trim();
+                    let ap = document.getElementById('apPaternoInput').value.trim();
+                    let am = document.getElementById('apMaternoInput').value.trim();
+                    let g = document.getElementById('grupoInput').value.trim();
+                    
+                    if (!n || !ap || !am || !g) {
+                        alert("Por favor, llena todos los campos (Nombre, Apellidos y Grupo) para poder registrarte.");
+                        document.getElementById('authBtn').innerText = 'Registrar y Guardar';
+                        return;
+                    }
+                    
+                    studentData = {
+                        expediente: exp, apPaterno: ap, apMaterno: am, nombre: n,
+                        grupo: g, avatar: selectedAvatar, puntos: 0, racha: 0, resueltos: 0, stats: {}
+                    };
+                }
+            }
+            if (window.cloudDB) window.cloudDB.saveProgress(studentData.expediente, studentData);
+            document.getElementById('loginModal').classList.add('hidden');
+            actualizarUIEstudiante(); initProblem();
+        }
+
+        async function showLeaderboard() {
+            if (!studentData.grupo) return alert("Inicia sesión primero para ver tu grupo.");
+            
+            document.getElementById('leaderboardModal').classList.remove('hidden');
+            document.getElementById('lbGroupTitle').innerText = `Grupo ${studentData.grupo}`;
+            const listEl = document.getElementById('leaderboardList');
+            listEl.innerHTML = '<div class="text-center py-8"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-orange-400 mb-2"></i><p class="text-slate-500 font-medium">Buscando los mejores puntajes...</p></div>';
+            lucide.createIcons();
+
+            if (!window.cloudDB) {
+                listEl.innerHTML = '<div class="text-center text-rose-500 py-4 font-bold">Sin conexión a la base de datos.</div>';
+                return;
             }
 
-            document.getElementById('loginModal').classList.add('hidden');
-            actualizarUIEstudiante();
-            initProblem();
+            try {
+                let allStudents = await window.cloudDB.getLeaderboard();
+                
+                // Filtrar por el mismo grupo y ordenar de mayor a menor puntaje
+                let groupStudents = allStudents.filter(s => s.grupo === studentData.grupo);
+                groupStudents.sort((a, b) => (b.puntos || 0) - (a.puntos || 0));
+                
+                let top5 = groupStudents.slice(0, 5);
+                
+                if (top5.length === 0) {
+                    listEl.innerHTML = '<div class="text-center text-slate-500 py-4 font-medium">Aún no hay puntajes en este grupo. ¡Sé el primero!</div>';
+                    return;
+                }
+
+                let html = '';
+                top5.forEach((st, idx) => {
+                    let medal = idx === 0 ? '🥇' : (idx === 1 ? '🥈' : (idx === 2 ? '🥉' : '👏'));
+                    let bg = idx === 0 ? 'bg-orange-50 border-orange-200' : 'bg-slate-50 border-slate-100';
+                    html += `
+                    <div class="flex items-center justify-between p-3 ${bg} border-2 rounded-2xl">
+                        <div class="flex items-center gap-3">
+                            <div class="w-8 text-center font-black text-xl text-slate-400">${idx + 1}</div>
+                            <div class="text-3xl bg-white p-2 rounded-xl shadow-sm border border-slate-100">${st.avatar || '🧑‍🎓'}</div>
+                            <div>
+                                <div class="font-bold text-slate-800 text-sm sm:text-base leading-tight">${st.nombre} ${st.apPaterno}</div>
+                                <div class="text-xs font-bold text-slate-400 uppercase tracking-wider">${medal} Top ${idx+1}</div>
+                            </div>
+                        </div>
+                        <div class="font-black text-lg text-orange-500 bg-orange-100 px-3 py-1 rounded-xl">${st.puntos || 0} pts</div>
+                    </div>`;
+                });
+                listEl.innerHTML = html;
+            } catch(e) {
+                listEl.innerHTML = '<div class="text-center text-rose-500 py-4 font-bold">Error al cargar la clasificación.</div>';
+            }
         }
 
         function cerrarSesion() {
@@ -470,66 +468,43 @@
             document.getElementById('streakCount').innerText = studentData.racha;
         }
 
-        // --- 3. UI Y NAVEGACIÓN ---
         function setDifficulty(diff) {
             currentState.difficulty = diff;
             const bg = document.getElementById('diffBgSelector');
-            const btnFacil = document.getElementById('diff-facil');
-            const btnMedio = document.getElementById('diff-medio');
-            const btnReto = document.getElementById('diff-reto');
+            const btns = [document.getElementById('diff-facil'), document.getElementById('diff-medio'), document.getElementById('diff-reto')];
+            btns.forEach(b => b.className = 'flex-1 py-2 text-sm font-bold z-10 text-slate-500');
 
-            btnFacil.className = 'flex-1 py-2 text-sm font-bold z-10 transition-colors text-slate-500';
-            btnMedio.className = 'flex-1 py-2 text-sm font-bold z-10 transition-colors text-slate-500';
-            btnReto.className = 'flex-1 py-2 text-sm font-bold z-10 transition-colors text-slate-500';
-
-            if(diff === 'facil') {
-                bg.style.left = '1.5%'; bg.style.width = '31%';
-                bg.className = 'absolute top-1.5 bottom-1.5 bg-green-100 border-2 border-green-200 rounded-xl transition-all duration-300 z-0';
-                btnFacil.classList.replace('text-slate-500', 'text-green-700');
-            } else if (diff === 'medio') {
-                bg.style.left = '34%'; bg.style.width = '32%';
-                bg.className = 'absolute top-1.5 bottom-1.5 bg-amber-100 border-2 border-amber-200 rounded-xl transition-all duration-300 z-0';
-                btnMedio.classList.replace('text-slate-500', 'text-amber-700');
-            } else {
-                bg.style.left = '67.5%'; bg.style.width = '31%';
-                bg.className = 'absolute top-1.5 bottom-1.5 bg-rose-100 border-2 border-rose-200 rounded-xl transition-all duration-300 z-0';
-                btnReto.classList.replace('text-slate-500', 'text-rose-700');
-            }
-            updateHeaderUI();
-            initProblem();
+            if(diff === 'facil') { bg.style.left = '1.5%'; bg.style.width = '31%'; bg.className = 'absolute top-1.5 bottom-1.5 bg-green-100 border-2 border-green-200 rounded-xl transition-all duration-300 z-0'; btns[0].classList.replace('text-slate-500', 'text-green-700'); }
+            else if (diff === 'medio') { bg.style.left = '34%'; bg.style.width = '32%'; bg.className = 'absolute top-1.5 bottom-1.5 bg-amber-100 border-2 border-amber-200 rounded-xl transition-all duration-300 z-0'; btns[1].classList.replace('text-slate-500', 'text-amber-700'); }
+            else { bg.style.left = '67.5%'; bg.style.width = '31%'; bg.className = 'absolute top-1.5 bottom-1.5 bg-rose-100 border-2 border-rose-200 rounded-xl transition-all duration-300 z-0'; btns[2].classList.replace('text-slate-500', 'text-rose-700'); }
+            updateHeaderUI(); initProblem();
         }
 
         function setTopic(topic) {
             currentState.topic = topic;
             document.querySelectorAll('.menu-btn').forEach(btn => {
-                btn.className = 'menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left text-slate-600 hover:bg-slate-50';
-                let iconDiv = btn.querySelector('.icon-bg');
-                if(iconDiv) iconDiv.className = 'icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-500';
+                btn.className = 'menu-btn w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left text-slate-600 hover:bg-slate-50';
+                let i = btn.querySelector('.icon-bg'); if(i) i.className = 'icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-slate-100 text-slate-500';
             });
-            
-            const activeBtn = document.getElementById('btn-' + topic);
-            if(activeBtn) {
-                activeBtn.className = 'menu-btn active w-full flex items-center gap-3 p-2.5 rounded-xl transition-all font-medium text-left bg-indigo-600 text-white shadow-md shadow-indigo-200';
-                let iconDiv = activeBtn.querySelector('.icon-bg');
-                if(iconDiv) iconDiv.className = 'icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 text-white';
+            const btn = document.getElementById('btn-' + topic);
+            if(btn) {
+                btn.className = 'menu-btn active w-full flex items-center gap-3 p-2.5 rounded-xl font-medium text-left bg-indigo-600 text-white';
+                let i = btn.querySelector('.icon-bg'); if(i) i.className = 'icon-bg w-8 h-8 rounded-lg flex items-center justify-center bg-white/20 text-white';
             }
-            updateHeaderUI();
-            initProblem();
+            updateHeaderUI(); initProblem();
         }
 
         function updateHeaderUI() {
-            let pts = currentState.difficulty === 'facil' ? '+1 pt' : (currentState.difficulty === 'medio' ? '+2 pts' : '+3 pts');
+            let pts = currentState.difficulty === 'facil' ? '+1 PT' : (currentState.difficulty === 'medio' ? '+2 PTS' : '+3 PTS');
             let badge = document.getElementById('currentDiffBadge');
             badge.innerText = `${currentState.difficulty.toUpperCase()} ${pts}`;
-            
             if(currentState.difficulty === 'facil') badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-green-100 text-green-800 uppercase tracking-wide border border-green-200';
             if(currentState.difficulty === 'medio') badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-100 text-amber-800 uppercase tracking-wide border border-amber-200';
             if(currentState.difficulty === 'reto') badge.className = 'text-[10px] font-bold px-2 py-0.5 rounded-md bg-rose-100 text-rose-800 uppercase tracking-wide border border-rose-200';
         }
 
-        // --- 4. MOTORES DE GENERACIÓN MATEMÁTICA ---
         const rand = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
-        const primes = [2, 3, 5, 7, 11, 13, 17, 19];
+        const primes = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53, 59, 61, 67, 71, 73, 79, 83, 89, 97];
         const mcdCalc = (a, b) => b === 0 ? a : mcdCalc(b, a % b);
 
         function initProblem() {
@@ -538,34 +513,158 @@
             const input = document.getElementById('answerInput');
             input.value = ''; input.disabled = false; input.focus();
 
-            currentState.stepIndex = 0;
-            currentState.steps = [];
-            currentState.data = {};
+            currentState.stepIndex = 0; currentState.steps = []; currentState.data = {};
             
             if(currentState.topic === 'col_mul') genColMul();
             else if(currentState.topic === 'col_div') genColDiv();
             else if(currentState.topic === 'primos') genPrimos();
             else if(currentState.topic === 'mcd') genMCD();
             else if(currentState.topic === 'mcm') genMCM();
-            else if(currentState.topic.startsWith('frac_')) genFracciones();
+            else if(currentState.topic.startsWith('frac_') && currentState.topic !== 'frac_comb') genFracciones();
+            else if(currentState.topic === 'frac_comb') genFracComb();
             
             renderStep();
         }
 
-        // --- A. MULTIPLICACIÓN: Dígito por Dígito con acarreos ---
+        function calcOp(f1, f2, op) {
+            let n, d;
+            if (op === '*') { n = f1.n*f2.n; d = f1.d*f2.d; }
+            else if (op === '/') { n = f1.n*f2.d; d = f1.d*f2.n; }
+            else if (op === '+') {
+                d = (f1.d*f2.d)/mcdCalc(f1.d, f2.d);
+                n = f1.n*(d/f1.d) + f2.n*(d/f2.d);
+            }
+            else if (op === '-') {
+                d = (f1.d*f2.d)/mcdCalc(f1.d, f2.d);
+                n = f1.n*(d/f1.d) - f2.n*(d/f2.d);
+            }
+            return {n, d};
+        }
+
+        function genFracComb() {
+            let valid = false;
+            let dData, steps;
+            let reqSimps = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
+            
+            while(reqSimps >= 0 && !valid) {
+                for(let tries=0; tries<3000; tries++) {
+                    let numFracs = currentState.difficulty === 'reto' ? 4 : 3;
+                    let eq = [];
+                    for(let i=0; i<numFracs; i++) {
+                        let d = rand(2, 6);
+                        let n = rand(1, d > 1 ? d-1 : 2);
+                        eq.push({n, d});
+                        if (i < numFracs - 1) {
+                            let op;
+                            if (currentState.difficulty === 'facil') {
+                                op = ['*', '/'][rand(0, 1)];
+                            } else if (currentState.difficulty === 'medio') {
+                                op = (i === 0) ? ['+', '-'][rand(0, 1)] : ['*', '/'][rand(0, 1)];
+                                if(Math.random()<0.5 && i===0) op = ['*', '/'][rand(0, 1)]; 
+                            } else {
+                                op = ['+', '-', '*', '/'][rand(0, 3)];
+                            }
+                            eq.push(op);
+                        }
+                    }
+                    
+                    if (currentState.difficulty === 'medio' || currentState.difficulty === 'reto') {
+                        let hasAddSub = eq.includes('+') || eq.includes('-');
+                        let hasMulDiv = eq.includes('*') || eq.includes('/');
+                        if(!hasAddSub || !hasMulDiv) continue;
+                    }
+
+                    let tempEq = JSON.parse(JSON.stringify(eq));
+                    let simSteps = [];
+                    let isInvalid = false;
+                    
+                    while(tempEq.length > 1) {
+                        let opIdx = -1;
+                        for(let i=1; i<tempEq.length; i+=2) {
+                            if(tempEq[i] === '*' || tempEq[i] === '/') { opIdx = i; break; }
+                        }
+                        if (opIdx === -1) {
+                            for(let i=1; i<tempEq.length; i+=2) {
+                                if(tempEq[i] === '+' || tempEq[i] === '-') { opIdx = i; break; }
+                            }
+                        }
+                        
+                        let f1 = tempEq[opIdx-1];
+                        let op = tempEq[opIdx];
+                        let f2 = tempEq[opIdx+1];
+                        
+                        let res = calcOp(f1, f2, op);
+                        if (res.n <= 0 || res.d === 0 || res.d > 250 || res.n > 400) { isInvalid = true; break; }
+                        
+                        simSteps.push({
+                            eqState: JSON.parse(JSON.stringify(tempEq)),
+                            hIdx: opIdx,
+                            resN: res.n,
+                            resD: res.d,
+                            op: op
+                        });
+                        
+                        tempEq.splice(opIdx-1, 3, res);
+                    }
+                    
+                    if (isInvalid) continue;
+                    
+                    let finalRes = tempEq[0];
+                    let gcd = mcdCalc(finalRes.n, finalRes.d);
+                    let tempGcd = gcd;
+                    let pFactors = [];
+                    for (let p of primes) {
+                        while (tempGcd % p === 0) { pFactors.push(p); tempGcd /= p; }
+                    }
+                    
+                    if (pFactors.length >= reqSimps) {
+                        valid = true;
+                        steps = [];
+                        simSteps.forEach((ss, idx) => {
+                            let msgN = ss.op === '*' || ss.op === '/' ? "Jerarquía: Resuelve multiplicación/división primero. Numerador:" : "Ahora resuelve la suma/resta. Numerador:";
+                            if(currentState.difficulty === 'facil') msgN = "Resuelve la operación de izquierda a derecha. Numerador:";
+                            
+                            steps.push({ type: 'comb_num', eqState: ss.eqState, hIdx: ss.hIdx, expected: ss.resN, msg: msgN });
+                            steps.push({ type: 'comb_den', eqState: ss.eqState, hIdx: ss.hIdx, expected: ss.resD, msg: "Ahora ingresa el denominador resultante:" });
+                        });
+                        
+                        dData = { topic: 'frac_comb', simpChain: [], finalEq: JSON.parse(JSON.stringify(tempEq)) };
+                        
+                        let curN = finalRes.n;
+                        let curD = finalRes.d;
+                        pFactors.forEach((p, idx) => {
+                            curN /= p; curD /= p;
+                            dData.simpChain.push({ n: curN, d: curD, p: p });
+                            steps.push({type: 'simp_num', simpIdx: idx, expected: curN, msg: `¡Simplifica! Divide el numerador entre ${p}.`});
+                            steps.push({type: 'simp_den', simpIdx: idx, expected: curD, msg: `Divide el denominador entre ${p}.`});
+                        });
+                        break;
+                    }
+                }
+                if(!valid) reqSimps--;
+            }
+            
+            currentState.data = dData;
+            currentState.steps = steps;
+        }
+
         function genColMul() {
-            let n1 = currentState.difficulty === 'facil' ? rand(12, 99) : rand(100, 999);
-            let n2 = currentState.difficulty === 'reto' ? rand(12, 99) : rand(2, 9);
+            let n1, n2;
+            if (currentState.difficulty === 'facil') { n1 = rand(12, 99); n2 = rand(2, 9); }
+            else if (currentState.difficulty === 'medio') { n1 = rand(100, 999); n2 = rand(12, 99); }
+            else { n1 = rand(1000, 9999); n2 = rand(100, 999); }
             
             let s1 = n1.toString(), s2 = n2.toString();
+            let totalCols = s1.length + s2.length;
             let steps = [];
-            
-            currentState.data = { n1: s1, n2: s2, rows: [], finalAns: [], carries: Array(s1.length+1).fill(0) };
+            currentState.data = { n1: s1, n2: s2, totalCols, rows: [], finalAns: Array(totalCols).fill(''), carries: Array(totalCols).fill(0) };
 
             for (let j = s2.length - 1; j >= 0; j--) {
                 let multiplier = parseInt(s2[j]);
-                let rowAns = Array(s1.length + (s2.length-1-j)).fill(''); // zeros de desplazamiento invisibles al inicio
+                let shift = s2.length - 1 - j;
+                let rowAns = Array(totalCols).fill('');
                 let carry = 0;
+                let baseCol = totalCols - 1 - shift;
                 
                 for(let i = s1.length - 1; i >= 0; i--) {
                     let topDigit = parseInt(s1[i]);
@@ -573,79 +672,137 @@
                     let digitToPlace = prod % 10;
                     carry = Math.floor(prod / 10);
                     
-                    steps.push({
-                        type: 'mul_digit', rowIdx: s2.length - 1 - j, colIdx: i,
-                        expected: digitToPlace, nextCarry: carry,
-                        msg: `Multiplica ${topDigit} × ${multiplier} ${currentState.data.carries[i+1]>0 ? '+ acarreo' : ''}. ¿Qué número va abajo?`
-                    });
+                    let targetCol = baseCol - (s1.length - 1 - i);
+                    let nextN1Col = (totalCols - s1.length) + (i - 1); 
+                    
+                    steps.push({ type: 'mul_digit', rowIdx: shift, colIdx: targetCol, carryColIdx: nextN1Col, expected: digitToPlace, nextCarry: carry, msg: `Multiplica ${topDigit} × ${multiplier}. ¿Qué número va abajo?` });
                 }
-                if (carry > 0) {
-                    steps.push({ type: 'mul_digit', rowIdx: s2.length - 1 - j, colIdx: -1, expected: carry, nextCarry: 0, msg: `Coloca el acarreo final.` });
-                }
+                if (carry > 0) steps.push({ type: 'mul_digit', rowIdx: shift, colIdx: baseCol - s1.length, expected: carry, nextCarry: 0, msg: `Coloca el acarreo final.` });
+                
+                for (let k = 0; k < shift; k++) rowAns[totalCols - 1 - k] = '0';
                 currentState.data.rows.push(rowAns);
             }
-
             if (s2.length > 1) {
                 let finalRes = (n1 * n2).toString();
-                currentState.data.finalAns = Array(finalRes.length).fill('');
-                for(let i=finalRes.length-1; i>=0; i--) {
-                    steps.push({ type: 'add_final', colIdx: i, expected: parseInt(finalRes[i]), msg: `Suma las columnas. ¿Dígito final?` });
+                let offset = totalCols - finalRes.length;
+                for(let i = finalRes.length - 1; i >= 0; i--) {
+                    steps.push({ type: 'add_final', colIdx: offset + i, expected: parseInt(finalRes[i]), msg: `Suma las columnas. ¿Dígito final?` });
                 }
             }
             currentState.steps = steps;
         }
 
-        // --- B. DIVISIÓN: Cociente y luego Residuo ---
         function genColDiv() {
-            let div = currentState.difficulty === 'reto' ? rand(11, 25) : rand(2, 9);
-            let quo = currentState.difficulty === 'facil' ? rand(12, 49) : rand(105, 999);
-            let dividend = div * quo + rand(0, div - 1);
-            let divStr = dividend.toString();
-            
-            let steps = [];
-            currentState.data = { div, dividend: divStr, qArr: Array(divStr.length).fill(''), residues: [], curDivVal: 0 };
-
-            let currentDiv = parseInt(divStr[0]);
-            let idx = 0;
-            if (currentDiv < div) { currentDiv = parseInt(divStr[0] + divStr[1]); idx = 1; }
-
-            while(idx < divStr.length) {
-                let q = Math.floor(currentDiv / div);
-                let rem = currentDiv % div;
-                
-                steps.push({ type: 'quo', expected: q, qIdx: idx, val: currentDiv, msg: `¿Cuántas veces cabe ${div} en ${currentDiv}?` });
-                steps.push({ type: 'rem', expected: rem, qIdx: idx, val: currentDiv, sub: q*div, msg: `Resta ${q*div} a ${currentDiv}. ¿Cuál es el residuo?` });
-                
-                idx++;
-                if (idx < divStr.length) {
-                    currentDiv = parseInt(rem.toString() + divStr[idx]);
-                }
+            let div, dividend;
+            if (currentState.difficulty === 'facil') { 
+                div = rand(2, 9); 
+                dividend = rand(100, 999); 
             }
+            else if (currentState.difficulty === 'medio') { 
+                let pr = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29];
+                div = pr[Math.floor(Math.random() * pr.length)]; 
+                dividend = rand(1000, 9999); 
+            }
+            else { 
+                div = rand(10, 99); 
+                dividend = rand(10000, 99999); 
+            }
+            
+            let divStr = dividend.toString();
+            let steps = [];
+            let cycles = [];
+            let qArr = Array(divStr.length).fill('');
+
+            let currentVal = parseInt(divStr[0]);
+            let rightCol = 0;
+            
+            if (currentVal < div && divStr.length > 1) {
+                rightCol = 1;
+                currentVal = parseInt(divStr.substring(0, 2));
+            }
+
+            while (rightCol < divStr.length) {
+                let q = Math.floor(currentVal / div);
+                let sub = q * div;
+                let rem = currentVal - sub;
+                
+                cycles.push({ col: rightCol, val: currentVal, q: q, subStr: sub.toString(), remStr: rem.toString() });
+                let cIdx = cycles.length - 1;
+
+                steps.push({ type: 'quo', expected: q, cycleIdx: cIdx, qCol: rightCol, msg: `¿Cuántas veces cabe ${div} en ${currentVal}?` });
+                steps.push({ type: 'rem', expected: rem, cycleIdx: cIdx, qCol: rightCol, msg: `Resta: ${currentVal} - ${sub}. ¿Cuál es el residuo?` });
+
+                rightCol++;
+                if (rightCol < divStr.length) currentVal = parseInt(rem.toString() + divStr[rightCol]);
+            }
+            
+            currentState.data = { div: div, dividend: divStr, qArr: qArr, cycles: cycles };
             currentState.steps = steps;
         }
 
-        // --- C. FACTORES PRIMOS: Adivinar Primo -> Adivinar División ---
         function genPrimos() {
-            let num = currentState.difficulty === 'facil' ? rand(12, 40) : rand(50, 150);
-            while(primes.includes(num)) num++; 
+            let num = null;
+            let minF, minVal, maxVal;
+            
+            if (currentState.difficulty === 'facil') { minF = 3; minVal = 10; maxVal = 99; }
+            else if (currentState.difficulty === 'medio') { minF = 5; minVal = 100; maxVal = 999; }
+            else { minF = 7; minVal = 1000; maxVal = 99999; }
+            
+            while(!num) {
+                let tempNum = 1;
+                let count = 0;
+                while(tempNum <= maxVal) {
+                    let pList = Math.random() < 0.8 ? primes.slice(0, 4) : primes; 
+                    let p = pList[Math.floor(Math.random() * pList.length)];
+                    tempNum *= p;
+                    count++;
+                    
+                    if (tempNum >= minVal && tempNum <= maxVal && count >= minF) {
+                        num = tempNum;
+                        break;
+                    }
+                }
+            }
             
             let temp = num, steps = [], row = 0;
             currentState.data = { grid: [{ left: num, right: '?' }] };
 
             while(temp > 1) {
                 let p = primes.find(x => temp % x === 0) || temp;
-                steps.push({ type: 'prime', expected: p, row: row, msg: `¿Cuál es el número primo MENOR (2,3,5...) que divide a ${temp}?` });
+                steps.push({ type: 'prime', expected: p, row: row, msg: `¿Cuál es el número primo MENOR que divide a ${temp}?` });
                 temp /= p;
-                steps.push({ type: 'quotient', expected: temp, row: row, msg: `¿Cuánto es la mitad/tercia/etc de ${temp*p}?` });
+                steps.push({ type: 'quotient', expected: temp, row: row + 1, msg: `¿Cuánto es ${temp * p} ÷ ${p}?` });
                 row++;
             }
             currentState.steps = steps;
         }
 
-        // --- D. MCD / MCM: Formato Escalera Vertical ---
         function genMCD() {
-            let a = rand(12, 36), b = rand(12, 36);
-            if(a===b) b+=2;
+            let a = 0, b = 0;
+            let minF, minVal, maxVal;
+            
+            if (currentState.difficulty === 'facil') { minF = 2; minVal = 10; maxVal = 99; }
+            else if (currentState.difficulty === 'medio') { minF = 3; minVal = 100; maxVal = 999; }
+            else { minF = 5; minVal = 100; maxVal = 99999; }
+
+            while(true) {
+                let pList = [2, 2, 3, 3, 5, 7, 11];
+                let g = 1, factorsG = 0;
+                
+                while (factorsG < minF) { g *= pList[Math.floor(Math.random() * pList.length)]; factorsG++; }
+                let tempA = g, tempB = g;
+                while (tempA < minVal) tempA *= pList[Math.floor(Math.random() * pList.length)];
+                while (tempB < minVal) tempB *= pList[Math.floor(Math.random() * pList.length)];
+
+                if (tempA === tempB) tempB *= pList[Math.floor(Math.random() * pList.length)];
+
+                if (tempA >= minVal && tempA <= maxVal && tempB >= minVal && tempB <= maxVal && tempA !== tempB) {
+                    let tA = tempA, tB = tempB, comF = 0;
+                    for(let p of primes) { while(tA % p === 0 && tB % p === 0) { comF++; tA/=p; tB/=p; } }
+                    if (comF >= minF) { a = tempA; b = tempB; break; }
+                }
+            }
+            
             let tempA = a, tempB = b, steps = [], row = 0, factors = [];
             currentState.data = { title: `MCD(${a}, ${b})`, grid: [{ c1: a, c2: b, p: '?' }] };
 
@@ -654,13 +811,14 @@
                 if(!p) break;
                 factors.push(p);
                 steps.push({ type: 'prime', expected: p, row: row, msg: `¿Qué primo divide a AMBOS (${tempA} y ${tempB})?` });
+                
+                let prevA = tempA, prevB = tempB;
                 tempA /= p; tempB /= p;
-                steps.push({ type: 'q1', expected: tempA, row: row, msg: `Divide ${tempA*p} entre ${p}.` });
-                steps.push({ type: 'q2', expected: tempB, row: row, msg: `Divide ${tempB*p} entre ${p}.` });
+                
+                steps.push({ type: 'q1', expected: tempA, row: row + 1, msg: `Divide ${prevA} entre ${p}.` });
+                steps.push({ type: 'q2', expected: tempB, row: row + 1, msg: `Divide ${prevB} entre ${p}.` });
                 row++;
-                currentState.data.grid.push({ c1: tempA, c2: tempB, p: '?' });
             }
-            currentState.data.grid[row].p = ''; // No more common primes
             
             let ans = factors.reduce((x,y)=>x*y, 1);
             if(factors.length > 0) steps.push({ type: 'final', expected: ans, msg: `Multiplica los factores comunes: ${factors.join(' × ')}` });
@@ -670,7 +828,33 @@
         }
 
         function genMCM() {
-            let a = rand(6, 20), b = rand(6, 20);
+            let a = 0, b = 0;
+            let minF, minVal, maxVal;
+            
+            if (currentState.difficulty === 'facil') { minF = 2; minVal = 10; maxVal = 99; }
+            else if (currentState.difficulty === 'medio') { minF = 3; minVal = 100; maxVal = 999; }
+            else { minF = 5; minVal = 100; maxVal = 99999; }
+
+            while(true) {
+                let pList = [2, 2, 3, 3, 5, 7, 11];
+                let buildNum = () => { let n = 1; while(n < minVal) n *= pList[Math.floor(Math.random() * pList.length)]; return n; };
+                let tempA = buildNum();
+                let tempB = buildNum();
+
+                if (tempA === tempB) tempB *= pList[Math.floor(Math.random() * pList.length)];
+
+                if (tempA >= minVal && tempA <= maxVal && tempB >= minVal && tempB <= maxVal && tempA !== tempB) {
+                    let tA = tempA, tB = tempB, lcmF = 0;
+                    for(let p of primes) {
+                        let countA = 0, countB = 0;
+                        while(tA % p === 0) { countA++; tA /= p; }
+                        while(tB % p === 0) { countB++; tB /= p; }
+                        lcmF += Math.max(countA, countB);
+                    }
+                    if (lcmF >= minF) { a = tempA; b = tempB; break; }
+                }
+            }
+            
             let tempA = a, tempB = b, steps = [], row = 0, factors = [];
             currentState.data = { title: `mcm(${a}, ${b})`, grid: [{ c1: a, c2: b, p: '?' }] };
 
@@ -678,52 +862,230 @@
                 let p = primes.find(x => tempA % x === 0 || tempB % x === 0);
                 factors.push(p);
                 steps.push({ type: 'prime', expected: p, row: row, msg: `¿Qué primo divide a ALGUNO de los dos?` });
+                
                 if(tempA%p===0) tempA/=p;
-                steps.push({ type: 'q1', expected: tempA, row: row, msg: `Divide o baja el número igual.` });
+                steps.push({ type: 'q1', expected: tempA, row: row + 1, msg: `Divide o baja el número igual.` });
                 if(tempB%p===0) tempB/=p;
-                steps.push({ type: 'q2', expected: tempB, row: row, msg: `Divide o baja el número igual.` });
+                steps.push({ type: 'q2', expected: tempB, row: row + 1, msg: `Divide o baja el número igual.` });
                 row++;
-                if(tempA > 1 || tempB > 1) currentState.data.grid.push({ c1: tempA, c2: tempB, p: '?' });
             }
             let ans = factors.reduce((x,y)=>x*y, 1);
             steps.push({ type: 'final', expected: ans, msg: `Multiplica todos los primos de la derecha.` });
             currentState.steps = steps;
         }
 
-        // --- E. FRACCIONES ---
         function genFracciones() {
-            let d1 = rand(2, 6), d2 = rand(2, 6);
-            let n1 = rand(1, 5), n2 = rand(1, 5);
-            let steps = [];
-            
-            if (currentState.topic === 'frac_eq') {
-                let m = rand(2,5);
-                currentState.data = { n1, d1, n2: n1*m, d2: d1*m, missing: 'num' };
-                steps = [{type:'eq', expected: n1*m, msg: 'Encuentra el numerador equivalente.'}];
-            } else if (currentState.topic === 'frac_sum') {
-                let df = (d1*d2)/mcdCalc(d1,d2);
-                let nf = (n1*(df/d1)) + (n2*(df/d2));
-                currentState.data = { n1, d1, n2, d2, nf, df };
-                steps = [{type:'den', expected:df, msg:'Denominador común (mcm)'}, {type:'num', expected:nf, msg:'Suma de numeradores equivalentes'}];
-            } else if (currentState.topic === 'frac_mul') {
-                currentState.data = { n1, d1, n2, d2, nf: n1*n2, df: d1*d2 };
-                steps = [{type:'num', expected:n1*n2, msg:'Multiplica directo arriba'}, {type:'den', expected:d1*d2, msg:'Multiplica directo abajo'}];
-            } else if (currentState.topic === 'frac_div') {
-                currentState.data = { n1, d1, n2, d2, nf: n1*d2, df: d1*n2 };
-                steps = [{type:'num', expected:n1*d2, msg:'Multiplica cruzado (n1 x d2)'}, {type:'den', expected:d1*n2, msg:'Multiplica cruzado (d1 x n2)'}];
+            // Módulo de Cadenas (Equivalencias y Simplificación)
+            if (currentState.topic === 'frac_eq' || currentState.topic === 'frac_simp') {
+                let numSteps = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
+                let n1 = rand(1, 5), d1 = rand(2, 7);
+                
+                let gcd = mcdCalc(n1, d1);
+                n1 /= gcd; d1 /= gcd;
+                if (n1 === d1) d1++;
+
+                let chain = [];
+                let multipliers = [1];
+                
+                if (currentState.topic === 'frac_eq') {
+                    let curM = 1;
+                    for (let i = 0; i < numSteps; i++) {
+                        curM += rand(1, 3) + (currentState.difficulty === 'reto' ? 1 : 0);
+                        multipliers.push(curM);
+                    }
+                } else { 
+                    let mList = [1];
+                    let current = 1;
+                    for(let i = 0; i < numSteps; i++) {
+                        current *= rand(2, 4);
+                        mList.push(current);
+                    }
+                    mList.reverse(); 
+                    multipliers = mList;
+                }
+
+                for (let i = 0; i <= numSteps; i++) {
+                    chain.push({ n: n1 * multipliers[i], d: d1 * multipliers[i] });
+                }
+
+                let steps = [];
+                for (let i = 1; i <= numSteps; i++) {
+                    let missing = Math.random() < 0.5 ? 'num' : 'den';
+                    chain[i].missing = missing;
+                    if (missing === 'num') {
+                        steps.push({ type: 'frac_chain_num', chainIdx: i, expected: chain[i].n, msg: currentState.topic === 'frac_eq' ? 'Encuentra el numerador equivalente.' : 'Simplifica el numerador.' });
+                    } else {
+                        steps.push({ type: 'frac_chain_den', chainIdx: i, expected: chain[i].d, msg: currentState.topic === 'frac_eq' ? 'Encuentra el denominador equivalente.' : 'Simplifica el denominador.' });
+                    }
+                }
+
+                currentState.data = { isChain: true, chain: chain };
+                currentState.steps = steps;
+                return;
             }
-            currentState.steps = steps;
+
+            // Módulo Suma y Resta
+            if (currentState.topic === 'frac_sum') {
+                if (currentState.difficulty === 'facil') {
+                    let d1 = rand(2, 6), d2 = rand(2, 6);
+                    let n1 = rand(1, 5), n2 = rand(1, 5);
+                    let op = Math.random() < 0.5 ? '+' : '-';
+                    if (op === '-' && (n1/d1) < (n2/d2)) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
+                    let df = (d1 * d2) / mcdCalc(d1, d2);
+                    let num1Eq = n1 * (df / d1);
+                    let num2Eq = n2 * (df / d2);
+                    let nf = op === '+' ? num1Eq + num2Eq : num1Eq - num2Eq;
+                    currentState.data = { type: 'easy', n1, d1, n2, d2, op, nf, df };
+                    currentState.steps = [
+                        {type:'den', expected:df, msg:'Encuentra el denominador común (mcm)'},
+                        {type:'num', expected:nf, msg:`${op==='+'?'Suma':'Resta'} los numeradores equivalentes (${num1Eq} ${op} ${num2Eq})`}
+                    ];
+                } else if (currentState.difficulty === 'medio') {
+                    let d1 = rand(3, 9), d2 = rand(3, 9);
+                    while(d1 === d2) d2 = rand(3, 9);
+                    let n1 = rand(1, 8), n2 = rand(1, 8);
+                    let op = Math.random() < 0.5 ? '+' : '-';
+                    if (op === '-' && (n1/d1) < (n2/d2)) { [n1, n2] = [n2, n1]; [d1, d2] = [d2, d1]; }
+                    let df = d1 * d2; 
+                    let cross1 = n1 * d2;
+                    let cross2 = d1 * n2;
+                    let nf = op === '+' ? cross1 + cross2 : cross1 - cross2;
+                    currentState.data = { type: 'butterfly', n1, d1, n2, d2, op, nf, df, cross1, cross2 };
+                    currentState.steps = [
+                        {type:'den', expected:df, msg:`🦋 Mariposa: Multiplica denominadores (${d1} × ${d2})`},
+                        {type:'cross1', expected:cross1, msg:`🦋 Mariposa: Multiplica cruzado 1 (${n1} × ${d2})`},
+                        {type:'cross2', expected:cross2, msg:`🦋 Mariposa: Multiplica cruzado 2 (${d1} × ${n2})`},
+                        {type:'num', expected:nf, msg:`Realiza la ${op==='+'?'suma':'resta'} final en el numerador`}
+                    ];
+                } else {
+                    let d1 = rand(2, 6), d2 = rand(2, 6), d3 = rand(2, 6);
+                    while(d1===d2 && d2===d3) d3 = rand(3, 8);
+                    let n1 = rand(1, 5), n2 = rand(1, 5), n3 = rand(1, 5);
+                    let op1 = Math.random() < 0.5 ? '+' : '-';
+                    let op2 = Math.random() < 0.5 ? '+' : '-';
+                    
+                    let lcm2 = (d1 * d2) / mcdCalc(d1, d2);
+                    let df = (lcm2 * d3) / mcdCalc(lcm2, d3);
+                    
+                    let num1Eq = n1 * (df / d1);
+                    let num2Eq = n2 * (df / d2);
+                    let num3Eq = n3 * (df / d3);
+                    
+                    let nf = num1Eq;
+                    if(op1==='+') nf += num2Eq; else nf -= num2Eq;
+                    if(op2==='+') nf += num3Eq; else nf -= num3Eq;
+                    
+                    while(nf <= 0) { // Forzar resultado positivo para no confundir
+                         op1 = '+'; op2 = '+';
+                         nf = num1Eq + num2Eq + num3Eq;
+                    }
+                    
+                    currentState.data = { type: 'lcm3', n1, d1, n2, d2, n3, d3, op1, op2, nf, df, num1Eq, num2Eq, num3Eq };
+                    currentState.steps = [
+                        {type:'den', expected:df, msg:`Paso 1: Calcula el mcm de los denominadores (${d1}, ${d2}, ${d3})`},
+                        {type:'eq1', expected:num1Eq, msg:`Numerador 1: Divide el mcm entre ${d1} y multiplica por ${n1}`},
+                        {type:'eq2', expected:num2Eq, msg:`Numerador 2: Divide el mcm entre ${d2} y multiplica por ${n2}`},
+                        {type:'eq3', expected:num3Eq, msg:`Numerador 3: Divide el mcm entre ${d3} y multiplica por ${n3}`},
+                        {type:'num', expected:nf, msg:`Suma/Resta la cadena de numeradores`}
+                    ];
+                }
+                return;
+            }
+
+            // Módulos Completamente Renovados de Multiplicación y División (Con Simplificación Paso a Paso)
+            if (currentState.topic === 'frac_mul' || currentState.topic === 'frac_div') {
+                let valid = false;
+                let dData, steps;
+                
+                while (!valid) {
+                    let minD = 2, maxD = 6, maxN = 5;
+                    if (currentState.difficulty === 'medio') { minD = 3; maxD = 9; maxN = 8; }
+                    else if (currentState.difficulty === 'reto') { minD = 4; maxD = 12; maxN = 10; }
+                    
+                    let numFracs = currentState.difficulty === 'reto' ? 3 : 2;
+                    let fracs = [];
+                    for(let i=0; i<numFracs; i++) {
+                        let dNum = rand(minD, maxD);
+                        let nNum = rand(1, maxN);
+                        if(currentState.topic === 'frac_div' && nNum === 0) nNum = 1; // Evitar división por cero
+                        fracs.push({n: nNum, d: dNum});
+                    }
+                    
+                    steps = [];
+                    dData = { topic: currentState.topic, fracs, numFracs };
+
+                    if (currentState.topic === 'frac_mul') {
+                        dData.mode = 'mul';
+                        dData.nf = fracs.reduce((acc, f) => acc * f.n, 1);
+                        dData.df = fracs.reduce((acc, f) => acc * f.d, 1);
+                        steps.push({type: 'num', expected: dData.nf, msg: 'Multiplica todos los numeradores directo (arriba).'});
+                        steps.push({type: 'den', expected: dData.df, msg: 'Multiplica todos los denominadores directo (abajo).'});
+                    } 
+                    else if (currentState.topic === 'frac_div') {
+                        if (currentState.difficulty === 'facil') {
+                            dData.mode = 'div_cross';
+                            dData.nf = fracs[0].n * fracs[1].d;
+                            dData.df = fracs[0].d * fracs[1].n;
+                            steps.push({type: 'num', expected: dData.nf, msg: 'Multiplica cruzado (arriba × abajo) para el numerador.'});
+                            steps.push({type: 'den', expected: dData.df, msg: 'Multiplica cruzado (abajo × arriba) para el denominador.'});
+                        } else {
+                            dData.mode = 'div_inv';
+                            dData.nf = fracs[0].n * fracs[1].d * (numFracs === 3 ? fracs[2].d : 1);
+                            dData.df = fracs[0].d * fracs[1].n * (numFracs === 3 ? fracs[2].n : 1);
+                            
+                            steps.push({type: 'inv_n2', expected: fracs[1].d, msg: 'Invierte la 2da fracción: Escribe su nuevo numerador (arriba).'});
+                            steps.push({type: 'inv_d2', expected: fracs[1].n, msg: 'Invierte la 2da fracción: Escribe su nuevo denominador (abajo).'});
+                            
+                            if (numFracs === 3) {
+                                steps.push({type: 'inv_n3', expected: fracs[2].d, msg: 'Invierte la 3ra fracción: Escribe su nuevo numerador (arriba).'});
+                                steps.push({type: 'inv_d3', expected: fracs[2].n, msg: 'Invierte la 3ra fracción: Escribe su nuevo denominador (abajo).'});
+                            }
+                            
+                            steps.push({type: 'num', expected: dData.nf, msg: '¡Excelente! Ahora multiplica los numeradores directo.'});
+                            steps.push({type: 'den', expected: dData.df, msg: 'Multiplica los denominadores directo.'});
+                        }
+                    }
+                    
+                    dData.gcd = mcdCalc(dData.nf, dData.df);
+                    let tempGcd = dData.gcd;
+                    let pFactors = [];
+                    for (let p of primes) {
+                        while (tempGcd % p === 0) {
+                            pFactors.push(p);
+                            tempGcd /= p;
+                        }
+                    }
+                    
+                    // Condición de validación para asegurar la simplificación
+                    if (currentState.difficulty === 'facil') valid = true;
+                    else if (currentState.difficulty === 'medio' && pFactors.length >= 1) valid = true;
+                    else if (currentState.difficulty === 'reto' && pFactors.length >= 2) valid = true;
+                    
+                    if (valid) {
+                        dData.simpChain = [];
+                        let curN = dData.nf;
+                        let curD = dData.df;
+                        pFactors.forEach((p, idx) => {
+                            curN /= p;
+                            curD /= p;
+                            dData.simpChain.push({ n: curN, d: curD, p: p });
+                            steps.push({type: 'simp_num', simpIdx: idx, expected: curN, msg: `¡Simplifica! Divide el numerador entre ${p}.`});
+                            steps.push({type: 'simp_den', simpIdx: idx, expected: curD, msg: `Divide el denominador entre ${p}.`});
+                        });
+                    }
+                }
+                
+                currentState.data = dData;
+                currentState.steps = steps;
+            }
         }
 
-
-        // --- 5. MOTOR DE RENDERIZADO VISUAL ---
         function renderStep() {
             const canvas = document.getElementById('mathCanvas');
             let d = currentState.data;
             let stepDef = currentState.steps[currentState.stepIndex];
             let html = '';
 
-            // Barra de progreso y textos
             let pct = currentState.steps.length > 0 ? (currentState.stepIndex / currentState.steps.length)*100 : 100;
             document.getElementById('stepProgressBar').style.width = pct + '%';
             
@@ -732,164 +1094,429 @@
                 document.getElementById('instructionDesc').innerText = stepDef.msg;
             }
 
-            // RENDER: MULTIPLICACIÓN
             if (currentState.topic === 'col_mul') {
-                html += `<div class="flex flex-col items-end font-mono text-4xl sm:text-5xl font-bold tracking-widest relative mt-4 sm:mt-8">`;
+                let cClass = "w-10 h-10 sm:w-14 sm:h-14 shrink-0 text-center flex items-center justify-center";
+                html += `<div class="flex flex-col items-end font-mono text-4xl sm:text-5xl font-bold tracking-widest relative mt-4 sm:mt-8 pb-4">`;
                 
-                // Acarreos Animados
-                html += `<div class="flex h-8 sm:h-10 mb-2 text-lg sm:text-2xl">`;
-                for(let i=0; i<d.carries.length; i++) {
-                    html += `<div class="w-8 sm:w-12 text-center text-amber-500 font-black">${d.carries[i] > 0 ? `<span class="animate-pop-in inline-block bg-amber-100 rounded-full px-1 border border-amber-300">⬆️+${d.carries[i]}</span>` : '&nbsp;'}</div>`;
+                html += `<div class="flex w-full justify-end h-8 sm:h-10 mb-2 text-lg sm:text-2xl">`;
+                for(let i=0; i<d.totalCols; i++) {
+                    html += `<div class="${cClass} text-amber-500 font-black relative">
+                        ${d.carries[i] > 0 ? `<span class="absolute animate-pop-in bg-amber-100 rounded-lg px-1 sm:px-1.5 py-0.5 border-2 border-amber-300 text-sm sm:text-lg leading-none text-amber-700 shadow-sm z-10">+${d.carries[i]}</span>` : '&nbsp;'}
+                    </div>`;
                 }
                 html += `</div>`;
                 
-                // Superior
-                html += `<div class="flex"><div class="w-8 sm:w-12">&nbsp;</div>`;
-                for(let char of d.n1) html += `<div class="w-8 sm:w-12 text-center">${char}</div>`;
+                html += `<div class="flex w-full justify-end">`;
+                for(let i=0; i<d.totalCols; i++) {
+                    let n1Idx = i - (d.totalCols - d.n1.length);
+                    if (n1Idx >= 0) html += `<div class="${cClass}">${d.n1[n1Idx]}</div>`;
+                    else html += `<div class="${cClass}">&nbsp;</div>`;
+                }
                 html += `</div>`;
                 
-                // Inferior
-                html += `<div class="flex border-b-4 border-slate-800 pb-2 mb-2 relative">`;
-                html += `<div class="absolute left-[-1.5rem] sm:left-[-2rem] text-indigo-600 top-1">×</div>`;
-                for(let i=0; i<d.n1.length + 1 - d.n2.length; i++) html += `<div class="w-8 sm:w-12">&nbsp;</div>`;
-                for(let char of d.n2) html += `<div class="w-8 sm:w-12 text-center text-indigo-900">${char}</div>`;
+                html += `<div class="flex w-full justify-end border-b-4 border-slate-800 pb-2 mb-2 relative">`;
+                html += `<div class="absolute left-0 sm:left-4 text-indigo-600 top-1">×</div>`;
+                for(let i=0; i<d.totalCols; i++) {
+                    let n2Idx = i - (d.totalCols - d.n2.length);
+                    if (n2Idx >= 0) html += `<div class="${cClass} text-indigo-900">${d.n2[n2Idx]}</div>`;
+                    else html += `<div class="${cClass}">&nbsp;</div>`;
+                }
                 html += `</div>`;
 
-                // Filas parciales
                 d.rows.forEach((rowArr, rowIdx) => {
-                    html += `<div class="flex">`;
-                    for(let i=0; i<rowArr.length; i++) {
+                    html += `<div class="flex w-full justify-end">`;
+                    for(let i=0; i<d.totalCols; i++) {
                         let val = rowArr[i];
-                        let isActive = (stepDef && stepDef.type === 'mul_digit' && stepDef.rowIdx === rowIdx && (stepDef.colIdx === i || (stepDef.colIdx === -1 && i===0)));
+                        let isActive = (stepDef && stepDef.type === 'mul_digit' && stepDef.rowIdx === rowIdx && stepDef.colIdx === i);
                         
-                        if (val !== '') html += `<div class="w-8 sm:w-12 text-center text-emerald-600 glow-success animate-pop-in">${val}</div>`;
-                        else if (isActive) html += `<div class="w-8 sm:w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
-                        else html += `<div class="w-8 sm:w-12 text-center text-transparent">_</div>`;
+                        if (isActive) html += `<div class="${cClass}"><span class="text-indigo-700 bg-indigo-50 w-9 h-11 sm:w-12 sm:h-14 rounded-xl target-highlight inline-flex items-center justify-center">?</span></div>`;
+                        else if (val !== '') html += `<div class="${cClass} text-emerald-600 glow-success animate-pop-in">${val}</div>`;
+                        else html += `<div class="${cClass} text-transparent">_</div>`;
                     }
                     html += `</div>`;
                 });
 
-                // Suma Final (si hay más de 1 dígito)
-                if (d.n2.length > 1 && currentState.stepIndex >= d.rows.length * (d.n1.length + 1)) {
-                    html += `<div class="flex border-t-4 border-slate-800 pt-2 mt-2">`;
-                    for(let i=0; i<d.finalAns.length; i++) {
+                let isFinalStage = d.n2.length > 1 && (!stepDef || stepDef.type === 'add_final');
+                if (isFinalStage) {
+                    html += `<div class="flex w-full justify-end border-t-4 border-slate-800 pt-2 mt-2">`;
+                    for(let i=0; i<d.totalCols; i++) {
                         let val = d.finalAns[i];
                         let isActive = (stepDef && stepDef.type === 'add_final' && stepDef.colIdx === i);
-                        if (val !== '') html += `<div class="w-8 sm:w-12 text-center text-emerald-600 font-black animate-pop-in">${val}</div>`;
-                        else if (isActive) html += `<div class="w-8 sm:w-12 text-center text-indigo-700 bg-indigo-50 rounded-xl target-highlight">?</div>`;
-                        else html += `<div class="w-8 sm:w-12 text-center text-transparent">_</div>`;
+                        if (isActive) html += `<div class="${cClass}"><span class="text-indigo-700 bg-indigo-50 w-9 h-11 sm:w-12 sm:h-14 rounded-xl target-highlight inline-flex items-center justify-center">?</span></div>`;
+                        else if (val !== '') html += `<div class="${cClass} text-emerald-600 font-black animate-pop-in">${val}</div>`;
+                        else html += `<div class="${cClass} text-transparent">_</div>`;
                     }
                     html += `</div>`;
                 }
                 html += `</div>`;
             }
             
-            // RENDER: DIVISIÓN CASITA
             else if (currentState.topic === 'col_div') {
-                html += `<div class="flex flex-col items-center font-mono text-3xl sm:text-4xl font-bold">`;
+                let cClass = "w-8 h-8 sm:w-12 sm:h-12 shrink-0 text-center flex items-center justify-center font-bold";
+
+                html += `<div class="flex flex-col items-center font-mono text-3xl sm:text-4xl overflow-x-auto w-full pb-6 pt-4">`;
                 
-                // Cociente Arriba
-                html += `<div class="flex ml-8 sm:ml-12 mb-1">`;
-                for(let i=0; i<d.qArr.length; i++) {
-                    let isActive = (stepDef && stepDef.type === 'quo' && stepDef.qIdx === i);
-                    if (d.qArr[i] !== '') html += `<div class="w-8 sm:w-12 text-center text-emerald-600 glow-success animate-pop-in">${d.qArr[i]}</div>`;
-                    else if (isActive) html += `<div class="w-8 sm:w-12 text-center text-indigo-700 bg-indigo-50 rounded-lg target-highlight">?</div>`;
-                    else html += `<div class="w-8 sm:w-12 text-center text-transparent">_</div>`;
+                // Quotient Row
+                html += `<div class="flex items-end mb-1">`;
+                html += `<div class="text-transparent pr-2 sm:pr-4">${d.div}</div>`;
+                html += `<div class="flex pl-1 sm:pl-2">`;
+                for(let i=0; i<d.dividend.length; i++) {
+                    let isActive = (stepDef && stepDef.type === 'quo' && stepDef.qCol === i);
+                    if (d.qArr[i] !== '') html += `<div class="${cClass} text-emerald-600 glow-success animate-pop-in">${d.qArr[i]}</div>`;
+                    else if (isActive) html += `<div class="${cClass}"><span class="text-indigo-700 bg-indigo-50 w-8 h-10 sm:w-10 sm:h-12 rounded-xl target-highlight inline-flex items-center justify-center shadow-sm">?</span></div>`;
+                    else html += `<div class="${cClass} text-transparent">_</div>`;
                 }
-                html += `</div>`;
-                
-                // Casita
-                html += `<div class="flex items-center">`;
-                html += `<div class="pr-2 sm:pr-3 text-slate-700">${d.div}</div>`;
-                html += `<div class="border-l-4 border-t-4 border-slate-800 pl-1 sm:pl-2 pt-1 flex">`;
-                for(let char of d.dividend) html += `<div class="w-8 sm:w-12 text-center text-slate-800">${char}</div>`;
                 html += `</div></div>`;
 
-                // Residuos y Restas
-                html += `<div class="flex flex-col w-full ml-8 sm:ml-12 text-xl sm:text-2xl text-slate-500 items-start pl-[${d.curDivVal.toString().length * 1.5}rem]">`;
-                d.residues.forEach((r, idx) => {
-                    html += `<div class="text-rose-500 animate-pop-in mt-1">-${r.sub}</div>`;
-                    html += `<div class="border-t-2 border-slate-400 text-emerald-600 font-bold mb-2 w-12 sm:w-16 text-right">${r.rem}</div>`;
+                // Casita Row
+                html += `<div class="flex items-center mb-1">`;
+                html += `<div class="pr-2 sm:pr-4 text-slate-700 font-black">${d.div}</div>`;
+                html += `<div class="flex border-l-4 border-t-4 border-slate-800 pl-1 sm:pl-2 pt-1 pb-1 rounded-tl-lg">`;
+                for(let char of d.dividend) {
+                    html += `<div class="${cClass} text-slate-800">${char}</div>`;
+                }
+                html += `</div></div>`;
+
+                // Bottom Rows (Cycles)
+                html += `<div class="flex flex-col items-end">`;
+                html += `<div class="flex items-start">`;
+                html += `<div class="text-transparent pr-2 sm:pr-4">${d.div}</div>`; // Spacer for divisor
+                html += `<div class="flex flex-col pl-1 sm:pl-2 border-l-4 border-transparent">`; // Spacer for casita line
+
+                let gridCols = d.dividend.length;
+                d.cycles.forEach((cyc, idx) => {
+                    let quoStepIdx = currentState.steps.findIndex(s => s.type === 'quo' && s.cycleIdx === idx);
+                    let remStepIdx = currentState.steps.findIndex(s => s.type === 'rem' && s.cycleIdx === idx);
+
+                    let quoDone = currentState.stepIndex > quoStepIdx;
+                    let remDone = currentState.stepIndex > remStepIdx;
+                    let isRemAct = (stepDef && stepDef.type === 'rem' && stepDef.cycleIdx === idx);
+
+                    if (quoDone || isRemAct) {
+                        html += `<div class="flex text-rose-500 mt-1">`;
+                        let offset = cyc.col - cyc.subStr.length + 1;
+                        for (let i = 0; i < gridCols; i++) {
+                            if (i >= offset && i <= cyc.col) {
+                                let char = cyc.subStr[i - offset];
+                                if (i === offset) {
+                                    html += `<div class="${cClass} relative"><span class="absolute left-[-0.8rem] sm:left-[-1.2rem]">-</span>${char}</div>`;
+                                } else {
+                                    html += `<div class="${cClass}">${char}</div>`;
+                                }
+                            } else {
+                                html += `<div class="${cClass} text-transparent">_</div>`;
+                            }
+                        }
+                        html += `</div>`;
+                    }
+
+                    if (remDone || isRemAct) {
+                        html += `<div class="flex border-t-[3px] border-slate-300">`;
+                        let hasBroughtDown = remDone && idx < d.cycles.length - 1;
+                        let bdDigit = hasBroughtDown ? d.dividend[cyc.col + 1] : '';
+                        let remStr = cyc.remStr;
+                        let remOffset = cyc.col - remStr.length + 1;
+
+                        for (let i = 0; i < gridCols; i++) {
+                            if (isRemAct && i === cyc.col) {
+                                html += `<div class="${cClass}"><span class="text-indigo-700 bg-indigo-50 w-8 h-10 sm:w-10 sm:h-12 rounded-xl target-highlight inline-flex items-center justify-center shadow-sm">?</span></div>`;
+                            }
+                            else if (remDone && i >= remOffset && i <= cyc.col) {
+                                html += `<div class="${cClass} text-emerald-600">${remStr[i - remOffset]}</div>`;
+                            }
+                            else if (hasBroughtDown && i === cyc.col + 1) {
+                                html += `<div class="${cClass} text-slate-500 relative flex flex-col items-center justify-center animate-pop-in">
+                                    <span class="absolute -top-[1rem] sm:-top-[1.2rem] text-lg sm:text-xl font-black text-slate-300">↓</span>
+                                    ${bdDigit}
+                                </div>`;
+                            }
+                            else {
+                                html += `<div class="${cClass} text-transparent">_</div>`;
+                            }
+                        }
+                        html += `</div>`;
+                    }
                 });
                 
-                if (stepDef && stepDef.type === 'rem') {
-                    html += `<div class="text-rose-500 mt-1">-${stepDef.sub}</div>`;
-                    html += `<div class="border-t-2 border-slate-400 text-indigo-700 bg-indigo-50 px-2 sm:px-4 py-1 rounded-xl target-highlight w-auto mt-1">Resta = ?</div>`;
-                }
-                html += `</div></div>`;
+                html += `</div></div></div></div>`;
             }
 
-            // RENDER: FACTORES PRIMOS Y MCD/MCM (Mismo formato escalera)
             else if (currentState.topic === 'primos' || currentState.topic === 'mcd' || currentState.topic === 'mcm') {
                 if (d.title) html += `<div class="text-lg sm:text-xl font-bold text-slate-400 mb-4 sm:mb-6 bg-slate-100 px-4 py-1 rounded-full">${d.title}</div>`;
                 
                 html += `<div class="flex font-mono text-3xl sm:text-4xl font-bold bg-white p-4 sm:p-6 rounded-3xl border-2 border-slate-100 shadow-sm w-full max-w-full overflow-x-auto justify-center">`;
                 
-                // Columna(s) Izquierda
                 html += `<div class="flex flex-col items-end pr-4 sm:pr-6 border-r-4 border-slate-800">`;
                 d.grid.forEach((row, i) => {
-                    let isActQ1 = (stepDef && (stepDef.type === 'quotient' || stepDef.type === 'q1') && stepDef.row === i);
-                    let isActQ2 = (stepDef && stepDef.type === 'q2' && stepDef.row === i);
+                    html += `<div class="py-1 flex gap-3 sm:gap-6 items-center h-12 sm:h-16">`;
                     
-                    html += `<div class="py-2 flex gap-3 sm:gap-6 items-center">`;
-                    if (row.left !== undefined) {
-                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.left}</div>`;
-                    } else {
-                        html += isActQ1 ? `<div class="text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c1}</div>`;
+                    if (row.left !== undefined) { 
+                        let isAct = (stepDef && stepDef.type === 'quotient' && stepDef.row === i);
+                        if (row.left === '?' || isAct) {
+                            html += `<div class="text-indigo-700 bg-indigo-50 border-2 border-indigo-300 target-highlight px-3 py-1 sm:px-4 sm:py-2 rounded-xl text-center min-w-[3rem]">?</div>`;
+                        } else {
+                            html += `<div class="text-slate-800 px-3 py-1 sm:px-4 sm:py-2">${row.left}</div>`;
+                        }
+                    } else { 
+                        let isActQ1 = (stepDef && stepDef.type === 'q1' && stepDef.row === i);
+                        let isActQ2 = (stepDef && stepDef.type === 'q2' && stepDef.row === i);
+                        
+                        if (row.c1 === '?' || isActQ1) html += `<div class="text-indigo-700 bg-indigo-50 border-2 border-indigo-300 target-highlight px-3 py-1 sm:px-4 sm:py-2 rounded-xl text-center min-w-[3rem]">?</div>`;
+                        else html += `<div class="text-slate-800 px-3 py-1 sm:px-4 sm:py-2">${row.c1}</div>`;
+                        
                         html += `<div class="text-slate-300 text-xl sm:text-2xl">-</div>`;
-                        html += isActQ2 ? `<div class="text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>` : `<div class="text-slate-800">${row.c2}</div>`;
+                        
+                        if (row.c2 === '?' || isActQ2) html += `<div class="text-indigo-700 bg-indigo-50 border-2 border-indigo-300 target-highlight px-3 py-1 sm:px-4 sm:py-2 rounded-xl text-center min-w-[3rem]">?</div>`;
+                        else html += `<div class="text-slate-800 px-3 py-1 sm:px-4 sm:py-2">${row.c2}</div>`;
                     }
                     html += `</div>`;
                 });
                 html += `</div>`;
                 
-                // Columna Derecha (Primos)
                 html += `<div class="flex flex-col items-center pl-4 sm:pl-6">`;
                 d.grid.forEach((row, i) => {
-                    let pVal = row.right || row.p;
+                    let pVal = row.right !== undefined ? row.right : row.p;
                     let isActive = (stepDef && stepDef.type === 'prime' && stepDef.row === i);
-                    if (pVal !== '?' && pVal !== '') html += `<div class="py-2 text-emerald-600 glow-success animate-pop-in">${pVal}</div>`;
-                    else if (isActive) html += `<div class="py-2 text-indigo-700 target-highlight px-2 sm:px-3 rounded-lg">?</div>`;
-                    else if (pVal === '') html += `<div class="py-2 text-transparent">_</div>`;
+                    
+                    html += `<div class="py-1 flex items-center h-12 sm:h-16">`;
+                    if (pVal !== '?' && pVal !== '') {
+                        html += `<div class="text-emerald-600 font-bold glow-success animate-pop-in px-3">${pVal}</div>`;
+                    } else if (isActive || pVal === '?') {
+                        html += `<div class="text-indigo-700 bg-indigo-50 border-2 border-indigo-300 target-highlight px-3 py-1 sm:px-4 sm:py-2 rounded-xl text-center min-w-[3rem]">?</div>`;
+                    } else {
+                        html += `<div class="text-transparent px-3">_</div>`;
+                    }
+                    html += `</div>`;
                 });
                 html += `</div></div>`;
                 
                 if (stepDef && stepDef.type === 'final') {
-                    html += `<div class="mt-4 sm:mt-8 text-xl sm:text-3xl font-bold text-indigo-700 bg-indigo-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl target-highlight shadow-inner text-center">Resultado = ?</div>`;
+                    html += `<div class="mt-4 sm:mt-8 text-xl sm:text-3xl font-bold text-indigo-700 bg-indigo-50 px-4 sm:px-8 py-2 sm:py-3 rounded-2xl target-highlight shadow-inner text-center animate-pop-in">Resultado Final = ?</div>`;
                 }
             }
 
-            // RENDER: FRACCIONES
-            else if (currentState.topic.startsWith('frac_')) {
-                html += `<div class="flex items-center gap-2 sm:gap-6 text-3xl sm:text-5xl font-bold font-fredoka text-slate-800 mt-4 w-full justify-center overflow-x-auto pb-4">`;
+            else if (currentState.topic === 'frac_sum') {
+                html += `<div class="flex items-center gap-2 sm:gap-4 text-xl sm:text-3xl font-bold font-fredoka text-slate-800 mt-4 w-full justify-center flex-wrap px-2 overflow-x-auto pb-4">`;
+                
                 html += `<div class="math-frac"><span>${d.n1}</span><div class="math-frac-line"></div><span>${d.d1}</span></div>`;
+                html += `<div class="text-indigo-600">${d.op || d.op1}</div>`;
+                html += `<div class="math-frac"><span>${d.n2}</span><div class="math-frac-line"></div><span>${d.d2}</span></div>`;
                 
-                let op = '=';
-                if(currentState.topic==='frac_sum') op = '+';
-                if(currentState.topic==='frac_mul') op = '×';
-                if(currentState.topic==='frac_div') op = '÷';
-                html += `<div class="text-indigo-600 bg-indigo-50 w-8 h-8 sm:w-12 sm:h-12 flex items-center justify-center rounded-full text-xl sm:text-3xl flex-shrink-0">${op}</div>`;
+                if (d.type === 'lcm3') {
+                    html += `<div class="text-indigo-600">${d.op2}</div>`;
+                    html += `<div class="math-frac"><span>${d.n3}</span><div class="math-frac-line"></div><span>${d.d3}</span></div>`;
+                }
                 
-                if (currentState.topic !== 'frac_eq') {
-                    html += `<div class="math-frac"><span>${d.n2}</span><div class="math-frac-line"></div><span>${d.d2}</span></div>`;
-                    html += `<div class="text-indigo-600 text-xl sm:text-3xl flex-shrink-0">=</div>`;
+                html += `<div class="text-indigo-600">=</div>`;
+                
+                let denDoneFinal = currentState.stepIndex > 0;
+                let fDenClass = "text-emerald-600 glow-success animate-pop-in";
+                
+                if (d.type === 'butterfly' || d.type === 'lcm3') {
+                    let fDenMid = denDoneFinal ? `<span class="${fDenClass}">${d.df}</span>` : (stepDef && stepDef.type==='den' ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 inline-block min-w-[3rem]">?</span>` : `<span class="text-slate-200">_</span>`);
+                    
+                    let numHTML = '';
+                    if (d.type === 'butterfly') {
+                        let c1 = currentState.stepIndex > 1 ? `<span class="${fDenClass}">${d.cross1}</span>` : (stepDef && stepDef.type==='cross1' ? `<span class="target-highlight px-2 rounded-lg text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        let c2 = currentState.stepIndex > 2 ? `<span class="${fDenClass}">${d.cross2}</span>` : (stepDef && stepDef.type==='cross2' ? `<span class="target-highlight px-2 rounded-lg text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        numHTML = `<div class="flex items-center gap-2">${c1} <span class="text-slate-400">${d.op}</span> ${c2}</div>`;
+                    } else if (d.type === 'lcm3') {
+                        let e1 = currentState.stepIndex > 1 ? `<span class="${fDenClass}">${d.num1Eq}</span>` : (stepDef && stepDef.type==='eq1' ? `<span class="target-highlight px-2 rounded-lg text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        let e2 = currentState.stepIndex > 2 ? `<span class="${fDenClass}">${d.num2Eq}</span>` : (stepDef && stepDef.type==='eq2' ? `<span class="target-highlight px-2 rounded-lg text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        let e3 = currentState.stepIndex > 3 ? `<span class="${fDenClass}">${d.num3Eq}</span>` : (stepDef && stepDef.type==='eq3' ? `<span class="target-highlight px-2 rounded-lg text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        numHTML = `<div class="flex items-center gap-1 sm:gap-2">${e1} <span class="text-slate-400">${d.op1}</span> ${e2} <span class="text-slate-400">${d.op2}</span> ${e3}</div>`;
+                    }
+
+                    html += `<div class="math-frac"><div>${numHTML}</div><div class="math-frac-line"></div><span>${fDenMid}</span></div>`;
+                    html += `<div class="text-indigo-600">=</div>`;
+                }
+                
+                let numDone = currentState.stepIndex >= currentState.steps.length;
+                let fNumFinal = numDone ? `<span class="${fDenClass}">${d.nf}</span>` : (stepDef && stepDef.type==='num' ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 inline-block min-w-[3rem]">?</span>` : `<span class="text-slate-200">_</span>`);
+                let fDenFinal = denDoneFinal ? `<span class="${fDenClass}">${d.df}</span>` : (stepDef && stepDef.type==='den' && d.type === 'easy' ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 inline-block min-w-[3rem]">?</span>` : `<span class="text-slate-200">_</span>`);
+
+                html += `<div class="math-frac"><span>${fNumFinal}</span><div class="math-frac-line"></div><span>${fDenFinal}</span></div>`;
+                html += `</div>`;
+            }
+
+            else if (currentState.topic === 'frac_eq' || currentState.topic === 'frac_simp') {
+                html += `<div class="flex items-center gap-2 sm:gap-6 text-2xl sm:text-4xl font-bold font-fredoka text-slate-800 mt-4 w-full justify-center overflow-x-auto pb-4 px-4">`;
+                
+                if (d.isChain) {
+                    for (let i = 0; i < d.chain.length; i++) {
+                        if (i > 0) {
+                            html += `<div class="text-indigo-600 bg-indigo-50 w-8 h-8 sm:w-10 sm:h-10 flex items-center justify-center rounded-full text-xl sm:text-2xl flex-shrink-0 mx-1">=</div>`;
+                        }
+                        
+                        let frac = d.chain[i];
+                        let fNum = frac.n, fDen = frac.d;
+                        
+                        if (frac.missing) {
+                            let isCompleted = currentState.stepIndex > (i - 1);
+                            let isActive = currentState.stepIndex === (i - 1);
+                            
+                            if (frac.missing === 'num') {
+                                let isAct = isActive && stepDef && (stepDef.type === 'frac_chain_num');
+                                fNum = isCompleted ? `<span class="text-emerald-600 glow-success animate-pop-in">${frac.n}</span>` : (isAct ? `<span class="target-highlight px-2 sm:px-4 rounded-xl text-indigo-700 min-w-[2rem] sm:min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                                fDen = `<span class="text-slate-800">${frac.d}</span>`;
+                            } else {
+                                let isAct = isActive && stepDef && (stepDef.type === 'frac_chain_den');
+                                fNum = `<span class="text-slate-800">${frac.n}</span>`;
+                                fDen = isCompleted ? `<span class="text-emerald-600 glow-success animate-pop-in">${frac.d}</span>` : (isAct ? `<span class="target-highlight px-2 sm:px-4 rounded-xl text-indigo-700 min-w-[2rem] sm:min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                            }
+                        }
+                        
+                        html += `<div class="math-frac"><span>${fNum}</span><div class="math-frac-line"></div><span>${fDen}</span></div>`;
+                    }
+                }
+                html += `</div>`;
+            }
+
+            else if (currentState.topic === 'frac_mul' || currentState.topic === 'frac_div') {
+                html += `<div class="flex items-center gap-2 sm:gap-4 text-xl sm:text-3xl font-bold font-fredoka text-slate-800 mt-4 w-full justify-center flex-wrap overflow-x-auto pb-4 px-2">`;
+                
+                // Original equation
+                d.fracs.forEach((f, i) => {
+                    if (i > 0) html += `<div class="text-indigo-600 px-1 sm:px-2">${d.topic === 'frac_div' ? '÷' : '×'}</div>`;
+                    html += `<div class="math-frac"><span>${f.n}</span><div class="math-frac-line"></div><span>${f.d}</span></div>`;
+                });
+                
+                // Inverted equation (if div_inv)
+                if (d.mode === 'div_inv') {
+                    html += `<div class="text-indigo-600 mx-1 sm:mx-2">=</div>`;
+                    html += `<div class="math-frac"><span>${d.fracs[0].n}</span><div class="math-frac-line"></div><span>${d.fracs[0].d}</span></div>`;
+                    
+                    let invN2Done = currentState.stepIndex > currentState.steps.findIndex(s=>s.type==='inv_n2');
+                    let invD2Done = currentState.stepIndex > currentState.steps.findIndex(s=>s.type==='inv_d2');
+                    let invN2 = invN2Done ? `<span class="text-emerald-600 glow-success">${d.fracs[1].d}</span>` : (stepDef && stepDef.type === 'inv_n2' ? `<span class="target-highlight px-2 rounded-xl text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                    let invD2 = invD2Done ? `<span class="text-emerald-600 glow-success">${d.fracs[1].n}</span>` : (stepDef && stepDef.type === 'inv_d2' ? `<span class="target-highlight px-2 rounded-xl text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                    
+                    html += `<div class="text-indigo-600 px-1 sm:px-2">×</div>`;
+                    html += `<div class="math-frac"><span>${invN2}</span><div class="math-frac-line"></div><span>${invD2}</span></div>`;
+
+                    if (d.numFracs === 3) {
+                        let invN3Done = currentState.stepIndex > currentState.steps.findIndex(s=>s.type==='inv_n3');
+                        let invD3Done = currentState.stepIndex > currentState.steps.findIndex(s=>s.type==='inv_d3');
+                        let invN3 = invN3Done ? `<span class="text-emerald-600 glow-success">${d.fracs[2].d}</span>` : (stepDef && stepDef.type === 'inv_n3' ? `<span class="target-highlight px-2 rounded-xl text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        let invD3 = invD3Done ? `<span class="text-emerald-600 glow-success">${d.fracs[2].n}</span>` : (stepDef && stepDef.type === 'inv_d3' ? `<span class="target-highlight px-2 rounded-xl text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                        
+                        html += `<div class="text-indigo-600 px-1 sm:px-2">×</div>`;
+                        html += `<div class="math-frac"><span>${invN3}</span><div class="math-frac-line"></div><span>${invD3}</span></div>`;
+                    }
                 }
 
-                let numDone = currentState.stepIndex > (currentState.topic==='frac_sum'? 1:0);
-                let denDone = currentState.stepIndex > 0;
-                if(currentState.topic === 'frac_eq') { numDone = true; denDone = true; } // Solo 1 paso
+                // Result Block
+                html += `<div class="text-indigo-600 mx-1 sm:mx-2">=</div>`;
                 
-                let fNum = numDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.nf || d.n2}</span>` : (stepDef && (stepDef.type==='num' || stepDef.type==='eq') ? `<span class="target-highlight px-2 sm:px-4 rounded-xl text-indigo-700 min-w-[2.5rem] sm:min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
-                let fDen = denDone ? `<span class="text-emerald-600 glow-success animate-pop-in">${d.df || d.d2}</span>` : (stepDef && stepDef.type==='den' ? `<span class="target-highlight px-2 sm:px-4 rounded-xl text-indigo-700 min-w-[2.5rem] sm:min-w-[3rem] inline-block">?</span>` : `<span class="text-slate-200">_</span>`);
+                let numStepIdx = currentState.steps.findIndex(s => s.type === 'num');
+                let denStepIdx = currentState.steps.findIndex(s => s.type === 'den');
+                
+                let numDone = currentState.stepIndex > numStepIdx;
+                let denDone = currentState.stepIndex > denStepIdx;
+                
+                let fNum = numDone ? `<span class="text-emerald-600 glow-success">${d.nf}</span>` : (stepDef && stepDef.type === 'num' ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
+                let fDen = denDone ? `<span class="text-emerald-600 glow-success">${d.df}</span>` : (stepDef && stepDef.type === 'den' ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50">?</span>` : `<span class="text-slate-200">_</span>`);
                 
                 html += `<div class="math-frac"><span>${fNum}</span><div class="math-frac-line"></div><span>${fDen}</span></div>`;
+
+                // Simplification Block (Paso a paso)
+                if (d.simpChain && d.simpChain.length > 0) {
+                    d.simpChain.forEach((simp, idx) => {
+                        let simpNumStepIdx = currentState.steps.findIndex(s => s.type === 'simp_num' && s.simpIdx === idx);
+                        let simpDenStepIdx = currentState.steps.findIndex(s => s.type === 'simp_den' && s.simpIdx === idx);
+                        
+                        if (currentState.stepIndex >= simpNumStepIdx) {
+                            html += `<div class="text-indigo-600 mx-1 sm:mx-2">=</div>`;
+                            
+                            let sNumDone = currentState.stepIndex > simpNumStepIdx;
+                            let sDenDone = currentState.stepIndex > simpDenStepIdx;
+                            
+                            let isNumAct = (stepDef && stepDef.type === 'simp_num' && stepDef.simpIdx === idx);
+                            let isDenAct = (stepDef && stepDef.type === 'simp_den' && stepDef.simpIdx === idx);
+                            
+                            let sNum = sNumDone ? `<span class="text-emerald-600 glow-success">${simp.n}</span>` : (isNumAct ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 animate-pop-in">?</span>` : `<span class="text-slate-200">_</span>`);
+                            let sDen = sDenDone ? `<span class="text-emerald-600 glow-success">${simp.d}</span>` : (isDenAct ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 animate-pop-in">?</span>` : `<span class="text-slate-200">_</span>`);
+                            
+                            html += `<div class="math-frac"><span>${sNum}</span><div class="math-frac-line"></div><span>${sDen}</span></div>`;
+                        }
+                    });
+                }
+                
+                html += `</div>`;
+            }
+
+            else if (currentState.topic === 'frac_comb') {
+                html += `<div class="flex flex-col items-center gap-4 text-xl sm:text-3xl font-bold font-fredoka text-slate-800 w-full overflow-x-auto pb-4 px-2">`;
+                
+                let isSimpPhase = (stepDef && stepDef.type.startsWith('simp_')) || currentState.stepIndex >= currentState.steps.length;
+                
+                if (!isSimpPhase && stepDef && stepDef.eqState) {
+                    html += `<div class="flex items-center gap-2 sm:gap-4 flex-nowrap w-max mt-4">`;
+                    let eq = stepDef.eqState;
+                    let hIdx = stepDef.hIdx;
+                    
+                    for(let i=0; i<eq.length; i++) {
+                        if (i === hIdx - 1) html += `<div class="border-4 border-indigo-200 bg-indigo-50/60 rounded-3xl p-2 sm:p-4 flex items-center gap-2 sm:gap-4 shadow-sm relative"><span class="absolute -top-5 left-1/2 transform -translate-x-1/2 text-[10px] sm:text-xs font-bold text-indigo-600 whitespace-nowrap bg-indigo-100 border border-indigo-200 px-2 py-0.5 rounded-lg shadow-sm">Operación Actual</span>`;
+                        
+                        if (i % 2 === 0) { 
+                            html += `<div class="math-frac"><span>${eq[i].n}</span><div class="math-frac-line"></div><span>${eq[i].d}</span></div>`;
+                        } else { 
+                            let opStr = eq[i];
+                            if(opStr === '*') opStr = '×';
+                            if(opStr === '/') opStr = '÷';
+                            html += `<div class="text-indigo-600">${opStr}</div>`;
+                        }
+                        
+                        if (i === hIdx + 1) html += `</div>`;
+                    }
+                    html += `</div>`;
+                    
+                    html += `<div class="flex flex-col items-center mt-2 slide-up">`;
+                    html += `<div class="text-indigo-400 mb-2 font-black text-2xl">↓</div>`;
+                    
+                    let numDone = stepDef.type === 'comb_den'; 
+                    let fNum = numDone ? `<span class="text-emerald-600 glow-success">${currentState.steps[currentState.stepIndex-1].expected}</span>` : `<span class="target-highlight px-4 py-1.5 rounded-xl text-indigo-700 bg-indigo-50">?</span>`;
+                    let fDen = `<span class="text-slate-200">_</span>`;
+                    if (stepDef.type === 'comb_den') fDen = `<span class="target-highlight px-4 py-1.5 rounded-xl text-indigo-700 bg-indigo-50">?</span>`;
+                    
+                    html += `<div class="math-frac border-2 border-slate-200 p-4 rounded-2xl bg-white shadow-sm"><span>${fNum}</span><div class="math-frac-line"></div><span>${fDen}</span></div>`;
+                    html += `</div>`;
+                } 
+                else {
+                    html += `<div class="flex items-center gap-2 sm:gap-4 flex-nowrap w-max mt-4">`;
+                    let baseFrac = d.finalEq[0];
+                    html += `<div class="math-frac"><span>${baseFrac.n}</span><div class="math-frac-line"></div><span>${baseFrac.d}</span></div>`;
+                    
+                    if (d.simpChain && d.simpChain.length > 0) {
+                        d.simpChain.forEach((simp, idx) => {
+                            let simpNumStepIdx = currentState.steps.findIndex(s => s.type === 'simp_num' && s.simpIdx === idx);
+                            let simpDenStepIdx = currentState.steps.findIndex(s => s.type === 'simp_den' && s.simpIdx === idx);
+                            
+                            if (currentState.stepIndex >= simpNumStepIdx) {
+                                html += `<div class="text-indigo-600 mx-1 sm:mx-2">=</div>`;
+                                let sNumDone = currentState.stepIndex > simpNumStepIdx;
+                                let sDenDone = currentState.stepIndex > simpDenStepIdx;
+                                let isNumAct = (stepDef && stepDef.type === 'simp_num' && stepDef.simpIdx === idx);
+                                let isDenAct = (stepDef && stepDef.type === 'simp_den' && stepDef.simpIdx === idx);
+                                
+                                let sNum = sNumDone ? `<span class="text-emerald-600 glow-success">${simp.n}</span>` : (isNumAct ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 animate-pop-in">?</span>` : `<span class="text-slate-200">_</span>`);
+                                let sDen = sDenDone ? `<span class="text-emerald-600 glow-success">${simp.d}</span>` : (isDenAct ? `<span class="target-highlight px-3 py-1 rounded-xl text-indigo-700 bg-indigo-50 animate-pop-in">?</span>` : `<span class="text-slate-200">_</span>`);
+                                
+                                html += `<div class="math-frac"><span>${sNum}</span><div class="math-frac-line"></div><span>${sDen}</span></div>`;
+                            }
+                        });
+                    } else if (currentState.stepIndex >= currentState.steps.length) {
+                        html += `<div class="ml-4 text-emerald-600 font-bold bg-emerald-50 px-4 py-2 rounded-xl border border-emerald-200 animate-pop-in text-lg sm:text-xl">¡Fracción Irreducible!</div>`;
+                    }
+                    html += `</div>`;
+                }
+                
                 html += `</div>`;
             }
 
             canvas.innerHTML = html;
         }
 
-        // --- 6. VERIFICACIÓN Y FLUJO ---
         function verifyStep() {
             if (currentState.stepIndex >= currentState.steps.length) return;
             
@@ -901,42 +1528,57 @@
             let expectedStr = stepDef.expected.toString();
             let isCorrect = inputVal === expectedStr;
 
-            // Flexibilidad en Multiplicación: Aceptar el producto completo o solo la unidad
             if (currentState.topic === 'col_mul' && stepDef.type === 'mul_digit') {
                  let fullProd = stepDef.expected + (stepDef.nextCarry * 10);
                  if (inputVal === fullProd.toString()) isCorrect = true;
             }
 
             if (isCorrect) {
-                // Actualizar Modelo
                 if (currentState.topic === 'col_mul') {
                     if (stepDef.type === 'mul_digit') {
-                        if(stepDef.colIdx === -1) currentState.data.rows[stepDef.rowIdx][0] = stepDef.expected;
-                        else currentState.data.rows[stepDef.rowIdx][stepDef.colIdx] = stepDef.expected;
-                        if(stepDef.nextCarry > 0) currentState.data.carries[stepDef.colIdx] = stepDef.nextCarry;
+                        currentState.data.rows[stepDef.rowIdx][stepDef.colIdx] = stepDef.expected;
+                        currentState.data.carries.fill(0);
+                        if (stepDef.nextCarry > 0) {
+                            let targetCarryIdx = stepDef.carryColIdx !== undefined ? stepDef.carryColIdx : (stepDef.colIdx - 1);
+                            if (targetCarryIdx >= 0) currentState.data.carries[targetCarryIdx] = stepDef.nextCarry;
+                        }
                     } else if (stepDef.type === 'add_final') {
+                        currentState.data.carries.fill(0);
                         currentState.data.finalAns[stepDef.colIdx] = stepDef.expected;
                     }
                 }
                 else if (currentState.topic === 'col_div') {
-                    if (stepDef.type === 'quo') currentState.data.qArr[stepDef.qIdx] = stepDef.expected;
-                    if (stepDef.type === 'rem') currentState.data.residues.push({ sub: stepDef.sub, rem: stepDef.expected });
+                    if (stepDef.type === 'quo') currentState.data.qArr[stepDef.qCol] = stepDef.expected;
                 }
                 else if (currentState.topic === 'primos') {
-                    if (stepDef.type === 'prime') currentState.data.grid[stepDef.row].right = stepDef.expected;
-                    if (stepDef.type === 'quotient') {
+                    if (stepDef.type === 'prime') {
+                        currentState.data.grid[stepDef.row].right = stepDef.expected;
+                        currentState.data.grid.push({ left: '?', right: '' });
+                    }
+                    else if (stepDef.type === 'quotient') {
                         currentState.data.grid[stepDef.row].left = stepDef.expected;
-                        if(stepDef.expected > 1) currentState.data.grid.push({ left: stepDef.expected, right: '?' });
+                        if(stepDef.expected > 1) currentState.data.grid[stepDef.row].right = '?';
                     }
                 }
                 else if (currentState.topic === 'mcd' || currentState.topic === 'mcm') {
-                    if (stepDef.type === 'prime') currentState.data.grid[stepDef.row].p = stepDef.expected;
-                    if (stepDef.type === 'q1') currentState.data.grid[stepDef.row].c1 = stepDef.expected;
-                    if (stepDef.type === 'q2') currentState.data.grid[stepDef.row].c2 = stepDef.expected;
+                    if (stepDef.type === 'prime') {
+                        currentState.data.grid[stepDef.row].p = stepDef.expected;
+                        currentState.data.grid.push({ c1: '?', c2: '?', p: '' });
+                    }
+                    else if (stepDef.type === 'q1') {
+                        currentState.data.grid[stepDef.row].c1 = stepDef.expected;
+                    }
+                    else if (stepDef.type === 'q2') {
+                        currentState.data.grid[stepDef.row].c2 = stepDef.expected;
+                        let nextStep = currentState.steps[currentState.stepIndex + 1];
+                        if (nextStep && nextStep.type === 'prime') {
+                            currentState.data.grid[stepDef.row].p = '?';
+                        }
+                    }
                 }
 
                 currentState.stepIndex++;
-                triggerStepBurst();
+                confetti({ particleCount: 20, spread: 40, origin: { y: 0.8 }, colors: ['#10B981', '#34D399'] });
                 
                 if (currentState.stepIndex >= currentState.steps.length) finishProblem();
                 else renderStep();
@@ -949,25 +1591,51 @@
             inputEl.value = ''; inputEl.focus();
         }
 
-        function triggerStepBurst() {
-            confetti({ particleCount: 20, spread: 40, origin: { y: 0.8 }, colors: ['#10B981', '#34D399'] });
-        }
-
         function finishProblem() {
             renderStep();
             document.getElementById('inputContainer').classList.add('hidden');
             document.getElementById('successMessage').classList.remove('hidden');
             
-            let ptsGanados = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
-            studentData.puntos += ptsGanados;
+            let ptsOriginales = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
+            
+            // Determinar límites según el tema (Combinadas vs Resto)
+            let isComb = (currentState.topic === 'frac_comb');
+            let limiteTema = isComb ? 1000 : 500;
+            let limiteDiff = isComb ? 400 : 300;
+
+            let temaKey = currentState.topic + '_pts';
+            let diffKey = currentState.topic + '_' + currentState.difficulty + '_pts';
+            
+            let ptsActualesTema = studentData.stats[temaKey] || 0;
+            let ptsActualesDiff = studentData.stats[diffKey] || 0;
+            
+            // Calcular cuántos puntos realmente puede ganar sin pasarse de los límites
+            let ptsDisponiblesTema = limiteTema - ptsActualesTema;
+            let ptsDisponiblesDiff = limiteDiff - ptsActualesDiff;
+            
+            let ptsGanados = Math.min(ptsOriginales, Math.max(0, ptsDisponiblesTema), Math.max(0, ptsDisponiblesDiff));
+            
+            let rewardSpan = document.getElementById('rewardText');
+            if (ptsGanados > 0) {
+                studentData.puntos += ptsGanados;
+                studentData.stats[temaKey] = ptsActualesTema + ptsGanados;
+                studentData.stats[diffKey] = ptsActualesDiff + ptsGanados;
+                rewardSpan.innerText = ptsGanados;
+                rewardSpan.className = "font-bold text-emerald-600 text-xl";
+            } else {
+                if (ptsActualesTema >= limiteTema) {
+                    rewardSpan.innerText = `0 (Máx. ${limiteTema} pts en tema)`;
+                } else {
+                    rewardSpan.innerText = `0 (Máx. ${limiteDiff} pts en dificultad)`;
+                }
+                rewardSpan.className = "font-bold text-amber-500 text-sm sm:text-base";
+            }
+            
             studentData.racha += 1;
             studentData.resueltos += 1;
             studentData.stats[currentState.topic] = (studentData.stats[currentState.topic] || 0) + 1;
             
-            document.getElementById('rewardText').innerText = ptsGanados;
-            actualizarUIEstudiante();
-            guardarProgreso();
-            
+            actualizarUIEstudiante(); guardarProgreso();
             confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, zIndex: 200 });
         }
 
