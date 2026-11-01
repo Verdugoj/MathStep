@@ -794,7 +794,7 @@
                 if (localRaw) {
                     try {
                         let parsed = JSON.parse(localRaw);
-                        // MODO ESTRICTO: Solo aceptamos si tiene el hash de seguridad correcto
+                        // SOLUCIÓN EMOJI-CRASH: Usar encodeURIComponent para que btoa() no colapse
                         let secureStr = encodeURIComponent(JSON.stringify(parsed.data) + "MathStep_2026_Secure");
                         if (parsed.hash && btoa(secureStr) === parsed.hash) {
                             savedData = parsed.data;
@@ -953,6 +953,7 @@
         }
 
         function guardarProgreso() {
+            // SOLUCIÓN EMOJI-CRASH: Usar encodeURIComponent antes de encriptar
             let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
             let securePaquete = {
                 data: studentData,
