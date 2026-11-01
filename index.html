@@ -20,7 +20,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBXLeHfvxcVo-lvNpEHjf0vjfgjRJp4aYg",
@@ -35,11 +35,13 @@
 
         let db, auth;
         window.isCloudReady = false;
+        window.cloudDB_raw = null; 
 
         try {
             const app = initializeApp(firebaseConfig);
             db = getFirestore(app);
             auth = getAuth(app);
+            window.cloudDB_raw = db;
             
             signInAnonymously(auth).then((cred) => {
                 window.isCloudReady = true;
@@ -75,6 +77,11 @@
                     snap.forEach(doc => { students.push(doc.data()); });
                     return students;
                 } catch(e) { return []; }
+            },
+            escucharCambios(expediente, callback) {
+                if (!window.isCloudReady || !db) return null;
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
+                return onSnapshot(docRef, callback);
             }
         };
     </script>
@@ -310,14 +317,15 @@
         
         // ==========================================
         // CÁPSULA DE SEGURIDAD IIFE
-        // Esto previene manipulaciones desde la consola
         // ==========================================
         (function() {
             
         let selectedAvatar = '🧑‍🎓';
         let studentData = { expediente: '', nombre: '', apPaterno: '', apMaterno: '', grupo: '', avatar: '🧑‍🎓', puntos: 0, racha: 0, resueltos: 0, stats: {} };
         let currentState = { topic: 'col_mul', difficulty: 'facil', steps: [], stepIndex: 0, data: {} };
+        
         let problemFinished = false; // FLAG ANTI-SPAM
+        let liveSyncUnsubscribe = null; // LISTENER DEL ESCUDO EN TIEMPO REAL
 
         // ==============================================================
         // LISTA DE ALUMNOS PRECARGADA
@@ -830,8 +838,36 @@
                 }
             }
             guardarProgreso();
+            
+            activarEscudoTiempoReal(studentData.expediente);
+            
             document.getElementById('loginModal').classList.add('hidden');
             actualizarUIEstudiante(); initProblem();
+        }
+
+        function activarEscudoTiempoReal(expediente) {
+            if (!window.isCloudReady || !window.cloudDB_raw) return;
+            
+            if (liveSyncUnsubscribe) liveSyncUnsubscribe(); 
+            
+            liveSyncUnsubscribe = window.cloudDB.escucharCambios(expediente, (docSnap) => {
+                if (docSnap.exists()) {
+                    let serverData = docSnap.data();
+                    
+                    if (serverData.puntos < studentData.puntos || serverData.racha < studentData.racha) {
+                        
+                        studentData.puntos = serverData.puntos;
+                        studentData.racha = serverData.racha;
+                        studentData.resueltos = serverData.resueltos;
+                        studentData.stats = serverData.stats;
+                        
+                        guardarProgreso();
+                        
+                        alert("🔒 Control Escolar: Tus puntuaciones han sido auditadas y ajustadas por el profesor.");
+                        window.location.reload(); 
+                    }
+                }
+            });
         }
 
         document.getElementById('expedienteInput').addEventListener('input', function(e) {
@@ -909,6 +945,7 @@
         }
 
         function cerrarSesion() {
+            if (liveSyncUnsubscribe) liveSyncUnsubscribe();
             document.getElementById('loginModal').classList.remove('hidden');
             document.getElementById('expedienteInput').value = '';
             document.getElementById('registerForm').classList.add('hidden');
@@ -970,7 +1007,7 @@
         const mcdCalc = (a, b) => b === 0 ? a : mcdCalc(b, a % b);
 
         function initProblem() {
-            problemFinished = false; // DESBLOQUEAR EL CANDADO ANTI-SPAM AL INICIAR
+            problemFinished = false; 
 
             document.getElementById('successMessage').classList.add('hidden');
             document.getElementById('inputContainer').classList.remove('hidden');
@@ -2043,7 +2080,6 @@
         }
 
         function finishProblem() {
-            // BLOQUEO ANTI-SPAM (Si ya se terminó, ignora clics adicionales instantáneamente)
             if (problemFinished) return;
             problemFinished = true;
 
@@ -2098,10 +2134,14 @@
 
         window.onload = () => {
             if (studentData.expediente === '') document.getElementById('loginModal').classList.remove('hidden');
-            else { actualizarUIEstudiante(); initProblem(); }
+            else { 
+                actualizarUIEstudiante(); 
+                initProblem();
+                activarEscudoTiempoReal(studentData.expediente);
+            }
         };
 
-        // EXPORTAMOS SOLO LAS FUNCIONES SEGURAS PARA QUE FUNCIONEN LOS BOTONES DE LA INTERFAZ
+        // EXPORTAMOS SOLO LAS FUNCIONES SEGURAS PARA QUE FUNCIONEN LOS BOTONES
         window.selectAvatar = selectAvatar;
         window.handleAuthSubmit = handleAuthSubmit;
         window.showLeaderboard = showLeaderboard;
@@ -2111,7 +2151,10 @@
         window.initProblem = initProblem;
         window.verifyStep = verifyStep;
         
-        })(); // FIN DE LA CÁPSULA DE SEGURIDAD IIFE
+        })();
     </script>
 </body>
 </html>
+```
+
+Con esto concluimos la programación integral de la aplicación. Te recomiendo hacer una copia de seguridad en tu computadora de este bloque para que siempre tengas el código fuente seguro. ¡Ha sido un gusto construir esta excelente herramienta educativa contigo, profesor!
