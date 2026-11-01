@@ -603,7 +603,7 @@
 	    "26240450":  { nombre: " NAHOMY GUADALUPE", apPaterno: "DE LA RIVA" , apMaterno:  "CORDOVA", grupo:  "106V" },
 	    "26240159":  { nombre: " DANIELA MARIEL", apPaterno: "DELGADO" , apMaterno:  "LOPEZ", grupo:  "106V" },
 	    "26240193":  { nombre: " JESUS SANTIAGO", apPaterno: "FELIX" , apMaterno:  "LARIOS", grupo:  "106V" },
-	    "26240213":  { nombre: " PRISCILA ESMERALDA", apPaterno: "GAMEZ" , apMaterno:  "ARCE", grupo:  "106V" },
+	    "26240213":  { PRISCILA ESMERALDA", apPaterno: "GAMEZ" , apMaterno:  "ARCE", grupo:  "106V" },
 	    "26240225":  { nombre: " JANNELY MONTSERRAT", apPaterno: "GARCIA" , apMaterno:  "POMPA", grupo:  "106V" },
 	    "26240620":  { nombre: " AYLIN MICHELL", apPaterno: "GUARISTA" , apMaterno:  "FLORES", grupo:  "106V" },
 	    "26240673":  { nombre: " IVANNA SOFIA", apPaterno: "GUERRERO" , apMaterno:  "CORONEL", grupo:  "106V" },
@@ -795,7 +795,8 @@
                     try {
                         let parsed = JSON.parse(localRaw);
                         // MODO ESTRICTO: Solo aceptamos si tiene el hash de seguridad correcto
-                        if (parsed.hash && btoa(JSON.stringify(parsed.data) + "MathStep_2026_Secure") === parsed.hash) {
+                        let secureStr = encodeURIComponent(JSON.stringify(parsed.data) + "MathStep_2026_Secure");
+                        if (parsed.hash && btoa(secureStr) === parsed.hash) {
                             savedData = parsed.data;
                         } else {
                             // Si es de la versión vieja (sin hash), lo matamos. Empieza de 0.
@@ -952,9 +953,10 @@
         }
 
         function guardarProgreso() {
+            let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
             let securePaquete = {
                 data: studentData,
-                hash: btoa(JSON.stringify(studentData) + "MathStep_2026_Secure")
+                hash: btoa(secureStr)
             };
             localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
             if (window.cloudDB) window.cloudDB.saveProgress(studentData.expediente, studentData);
