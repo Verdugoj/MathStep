@@ -307,13 +307,20 @@
 
     <script>
         lucide.createIcons();
+        
+        // ==========================================
+        // CÁPSULA DE SEGURIDAD IIFE
+        // Esto previene manipulaciones desde la consola
+        // ==========================================
+        (function() {
+            
         let selectedAvatar = '🧑‍🎓';
         let studentData = { expediente: '', nombre: '', apPaterno: '', apMaterno: '', grupo: '', avatar: '🧑‍🎓', puntos: 0, racha: 0, resueltos: 0, stats: {} };
         let currentState = { topic: 'col_mul', difficulty: 'facil', steps: [], stepIndex: 0, data: {} };
+        let problemFinished = false; // FLAG ANTI-SPAM
 
         // ==============================================================
-        // LISTA DE ALUMNOS PRECARGADA (Edita o agrega aquí a tus alumnos)
-        // Formato: "EXPEDIENTE": { nombre: "...", apPaterno: "...", apMaterno: "...", grupo: "..." }
+        // LISTA DE ALUMNOS PRECARGADA
         // ==============================================================
         const alumnosListaMaestra = {
             "26240008":  { nombre: " DANIELA CAROLINA", apPaterno: "ALMANZA" , apMaterno:  "FLORES", grupo:  "101V" },
@@ -758,7 +765,6 @@
 	    "26080544":  { nombre: " SOFIA", apPaterno: "VARELA" , apMaterno:  "DIAZ", grupo:  "109M" },
 	    "26240567":  { nombre: " ISAAC AZHAI", apPaterno: "VEGA" , apMaterno:  "LUNA", grupo:  "109M" },
 	    "26240576":  { nombre: " MARIA RENATHA", apPaterno: "VERDUGO" , apMaterno:  "VALLE", grupo:  "109M" },
-
             "11111111": { nombre: "Estudiante", apPaterno: "De", apMaterno: "Prueba", grupo: "666" }
         };
 
@@ -768,46 +774,35 @@
             el.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-indigo-100 border-2 border-indigo-500';
         }
 
-        document.getElementById('expedienteInput').addEventListener('input', function(e) {
-            const val = e.target.value;
-            const isLocalKnown = localStorage.getItem('math_student_' + val) !== null;
-            
-            if (val.length === 8) {
-                document.getElementById('registerForm').classList.remove('hidden');
-                
-                // Si el alumno está en la lista maestra, no le pedimos nombre ni grupo, solo avatar.
-                if (alumnosListaMaestra[val] || isLocalKnown) {
-                    document.getElementById('formFields').classList.add('hidden');
-                    document.getElementById('loginSubtitle').innerText = alumnosListaMaestra[val] 
-                        ? `¡Hola ${alumnosListaMaestra[val].nombre}! Elige tu avatar.` 
-                        : '¡Bienvenido de vuelta!';
-                    document.getElementById('authBtn').innerText = 'Entrar a MathStep';
-                } else {
-                    // Si NO está en la lista, debe registrarse completo.
-                    document.getElementById('formFields').classList.remove('hidden');
-                    document.getElementById('loginSubtitle').innerText = 'Expediente nuevo. Completa tus datos.';
-                    document.getElementById('authBtn').innerText = 'Registrar y Guardar';
-                }
-            } else {
-                document.getElementById('registerForm').classList.add('hidden');
-                document.getElementById('loginSubtitle').innerText = 'Guarda tu progreso desde cualquier dispositivo';
-                document.getElementById('authBtn').innerText = 'Ingresar a la Nube';
-            }
-        });
-
         async function handleAuthSubmit() {
             const exp = document.getElementById('expedienteInput').value.trim();
             if (exp.length !== 8) { alert("El expediente debe tener 8 dígitos."); return; }
             document.getElementById('authBtn').innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; lucide.createIcons();
 
             let savedData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
-            if (!savedData) savedData = JSON.parse(localStorage.getItem('math_student_' + exp));
+            if (!savedData) {
+                let localRaw = localStorage.getItem('math_student_' + exp);
+                if (localRaw) {
+                    try {
+                        let parsed = JSON.parse(localRaw);
+                        if (parsed.hash) {
+                            if (btoa(JSON.stringify(parsed.data) + "MathStep_2026_Secure") === parsed.hash) {
+                                savedData = parsed.data;
+                            } else {
+                                alert("⚠️ Se detectó una alteración en los datos. El progreso local ha sido rechazado.");
+                                savedData = null;
+                            }
+                        } else {
+                            savedData = parsed;
+                        }
+                    } catch(e) { savedData = null; }
+                }
+            }
 
             if (savedData) {
                 studentData = savedData;
-                studentData.avatar = selectedAvatar; // Actualizar avatar si lo cambió
+                studentData.avatar = selectedAvatar; 
             } else {
-                // Verificar si está en la lista maestra
                 const preloaded = alumnosListaMaestra[exp];
                 if (preloaded) {
                     studentData = {
@@ -817,14 +812,13 @@
                         avatar: selectedAvatar, puntos: 0, racha: 0, resueltos: 0, stats: {}
                     };
                 } else {
-                    // Validación obligatoria si es nuevo y no está en lista
                     let n = document.getElementById('nombreInput').value.trim();
                     let ap = document.getElementById('apPaternoInput').value.trim();
                     let am = document.getElementById('apMaternoInput').value.trim();
                     let g = document.getElementById('grupoInput').value.trim();
                     
                     if (!n || !ap || !am || !g) {
-                        alert("Por favor, llena todos los campos (Nombre, Apellidos y Grupo) para poder registrarte.");
+                        alert("Por favor, llena todos los campos (Nombre, Apellidos y Grupo).");
                         document.getElementById('authBtn').innerText = 'Registrar y Guardar';
                         return;
                     }
@@ -835,10 +829,35 @@
                     };
                 }
             }
-            if (window.cloudDB) window.cloudDB.saveProgress(studentData.expediente, studentData);
+            guardarProgreso();
             document.getElementById('loginModal').classList.add('hidden');
             actualizarUIEstudiante(); initProblem();
         }
+
+        document.getElementById('expedienteInput').addEventListener('input', function(e) {
+            const val = e.target.value;
+            const isLocalKnown = localStorage.getItem('math_student_' + val) !== null;
+            
+            if (val.length === 8) {
+                document.getElementById('registerForm').classList.remove('hidden');
+                
+                if (alumnosListaMaestra[val] || isLocalKnown) {
+                    document.getElementById('formFields').classList.add('hidden');
+                    document.getElementById('loginSubtitle').innerText = alumnosListaMaestra[val] 
+                        ? `¡Hola ${alumnosListaMaestra[val].nombre}! Elige tu avatar.` 
+                        : '¡Bienvenido de vuelta!';
+                    document.getElementById('authBtn').innerText = 'Entrar a MathStep';
+                } else {
+                    document.getElementById('formFields').classList.remove('hidden');
+                    document.getElementById('loginSubtitle').innerText = 'Expediente nuevo. Completa tus datos.';
+                    document.getElementById('authBtn').innerText = 'Registrar y Guardar';
+                }
+            } else {
+                document.getElementById('registerForm').classList.add('hidden');
+                document.getElementById('loginSubtitle').innerText = 'Guarda tu progreso desde cualquier dispositivo';
+                document.getElementById('authBtn').innerText = 'Ingresar a la Nube';
+            }
+        });
 
         async function showLeaderboard() {
             if (!studentData.grupo) return alert("Inicia sesión primero para ver tu grupo.");
@@ -856,15 +875,13 @@
 
             try {
                 let allStudents = await window.cloudDB.getLeaderboard();
-                
-                // Filtrar por el mismo grupo y ordenar de mayor a menor puntaje
                 let groupStudents = allStudents.filter(s => s.grupo === studentData.grupo);
                 groupStudents.sort((a, b) => (b.puntos || 0) - (a.puntos || 0));
                 
                 let top5 = groupStudents.slice(0, 5);
                 
                 if (top5.length === 0) {
-                    listEl.innerHTML = '<div class="text-center text-slate-500 py-4 font-medium">Aún no hay puntajes en este grupo. ¡Sé el primero!</div>';
+                    listEl.innerHTML = '<div class="text-center text-slate-500 py-4 font-medium">Aún no hay puntajes en este grupo.</div>';
                     return;
                 }
 
@@ -898,7 +915,11 @@
         }
 
         function guardarProgreso() {
-            localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(studentData));
+            let securePaquete = {
+                data: studentData,
+                hash: btoa(JSON.stringify(studentData) + "MathStep_2026_Secure")
+            };
+            localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
             if (window.cloudDB) window.cloudDB.saveProgress(studentData.expediente, studentData);
         }
 
@@ -949,6 +970,8 @@
         const mcdCalc = (a, b) => b === 0 ? a : mcdCalc(b, a % b);
 
         function initProblem() {
+            problemFinished = false; // DESBLOQUEAR EL CANDADO ANTI-SPAM AL INICIAR
+
             document.getElementById('successMessage').classList.add('hidden');
             document.getElementById('inputContainer').classList.remove('hidden');
             const input = document.getElementById('answerInput');
@@ -1316,7 +1339,6 @@
         }
 
         function genFracciones() {
-            // Módulo de Cadenas (Equivalencias y Simplificación)
             if (currentState.topic === 'frac_eq' || currentState.topic === 'frac_simp') {
                 let numSteps = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
                 let n1 = rand(1, 5), d1 = rand(2, 7);
@@ -1365,7 +1387,6 @@
                 return;
             }
 
-            // Módulo Suma y Resta
             if (currentState.topic === 'frac_sum') {
                 if (currentState.difficulty === 'facil') {
                     let d1 = rand(2, 6), d2 = rand(2, 6);
@@ -1416,7 +1437,7 @@
                     if(op1==='+') nf += num2Eq; else nf -= num2Eq;
                     if(op2==='+') nf += num3Eq; else nf -= num3Eq;
                     
-                    while(nf <= 0) { // Forzar resultado positivo para no confundir
+                    while(nf <= 0) { 
                          op1 = '+'; op2 = '+';
                          nf = num1Eq + num2Eq + num3Eq;
                     }
@@ -1433,7 +1454,6 @@
                 return;
             }
 
-            // Módulos Completamente Renovados de Multiplicación y División (Con Simplificación Paso a Paso)
             if (currentState.topic === 'frac_mul' || currentState.topic === 'frac_div') {
                 let valid = false;
                 let dData, steps;
@@ -1448,7 +1468,7 @@
                     for(let i=0; i<numFracs; i++) {
                         let dNum = rand(minD, maxD);
                         let nNum = rand(1, maxN);
-                        if(currentState.topic === 'frac_div' && nNum === 0) nNum = 1; // Evitar división por cero
+                        if(currentState.topic === 'frac_div' && nNum === 0) nNum = 1;
                         fracs.push({n: nNum, d: dNum});
                     }
                     
@@ -1497,7 +1517,6 @@
                         }
                     }
                     
-                    // Condición de validación para asegurar la simplificación
                     if (currentState.difficulty === 'facil') valid = true;
                     else if (currentState.difficulty === 'medio' && pFactors.length >= 1) valid = true;
                     else if (currentState.difficulty === 'reto' && pFactors.length >= 2) valid = true;
@@ -1594,10 +1613,7 @@
             
             else if (currentState.topic === 'col_div') {
                 let cClass = "w-8 h-8 sm:w-12 sm:h-12 shrink-0 text-center flex items-center justify-center font-bold";
-
                 html += `<div class="flex flex-col items-center font-mono text-3xl sm:text-4xl overflow-x-auto w-full pb-6 pt-4">`;
-                
-                // Quotient Row
                 html += `<div class="flex items-end mb-1">`;
                 html += `<div class="text-transparent pr-2 sm:pr-4">${d.div}</div>`;
                 html += `<div class="flex pl-1 sm:pl-2">`;
@@ -1609,7 +1625,6 @@
                 }
                 html += `</div></div>`;
 
-                // Casita Row
                 html += `<div class="flex items-center mb-1">`;
                 html += `<div class="pr-2 sm:pr-4 text-slate-700 font-black">${d.div}</div>`;
                 html += `<div class="flex border-l-4 border-t-4 border-slate-800 pl-1 sm:pl-2 pt-1 pb-1 rounded-tl-lg">`;
@@ -1618,11 +1633,10 @@
                 }
                 html += `</div></div>`;
 
-                // Bottom Rows (Cycles)
                 html += `<div class="flex flex-col items-end">`;
                 html += `<div class="flex items-start">`;
-                html += `<div class="text-transparent pr-2 sm:pr-4">${d.div}</div>`; // Spacer for divisor
-                html += `<div class="flex flex-col pl-1 sm:pl-2 border-l-4 border-transparent">`; // Spacer for casita line
+                html += `<div class="text-transparent pr-2 sm:pr-4">${d.div}</div>`; 
+                html += `<div class="flex flex-col pl-1 sm:pl-2 border-l-4 border-transparent">`; 
 
                 let gridCols = d.dividend.length;
                 d.cycles.forEach((cyc, idx) => {
@@ -1816,13 +1830,11 @@
             else if (currentState.topic === 'frac_mul' || currentState.topic === 'frac_div') {
                 html += `<div class="flex items-center gap-2 sm:gap-4 text-xl sm:text-3xl font-bold font-fredoka text-slate-800 mt-4 w-full justify-center flex-wrap overflow-x-auto pb-4 px-2">`;
                 
-                // Original equation
                 d.fracs.forEach((f, i) => {
                     if (i > 0) html += `<div class="text-indigo-600 px-1 sm:px-2">${d.topic === 'frac_div' ? '÷' : '×'}</div>`;
                     html += `<div class="math-frac"><span>${f.n}</span><div class="math-frac-line"></div><span>${f.d}</span></div>`;
                 });
                 
-                // Inverted equation (if div_inv)
                 if (d.mode === 'div_inv') {
                     html += `<div class="text-indigo-600 mx-1 sm:mx-2">=</div>`;
                     html += `<div class="math-frac"><span>${d.fracs[0].n}</span><div class="math-frac-line"></div><span>${d.fracs[0].d}</span></div>`;
@@ -1846,7 +1858,6 @@
                     }
                 }
 
-                // Result Block
                 html += `<div class="text-indigo-600 mx-1 sm:mx-2">=</div>`;
                 
                 let numStepIdx = currentState.steps.findIndex(s => s.type === 'num');
@@ -1860,7 +1871,6 @@
                 
                 html += `<div class="math-frac"><span>${fNum}</span><div class="math-frac-line"></div><span>${fDen}</span></div>`;
 
-                // Simplification Block (Paso a paso)
                 if (d.simpChain && d.simpChain.length > 0) {
                     d.simpChain.forEach((simp, idx) => {
                         let simpNumStepIdx = currentState.steps.findIndex(s => s.type === 'simp_num' && s.simpIdx === idx);
@@ -2033,13 +2043,16 @@
         }
 
         function finishProblem() {
+            // BLOQUEO ANTI-SPAM (Si ya se terminó, ignora clics adicionales instantáneamente)
+            if (problemFinished) return;
+            problemFinished = true;
+
             renderStep();
             document.getElementById('inputContainer').classList.add('hidden');
             document.getElementById('successMessage').classList.remove('hidden');
             
             let ptsOriginales = currentState.difficulty === 'facil' ? 1 : (currentState.difficulty === 'medio' ? 2 : 3);
             
-            // Determinar límites según el tema (Combinadas vs Resto)
             let isComb = (currentState.topic === 'frac_comb');
             let limiteTema = isComb ? 1000 : 500;
             let limiteDiff = isComb ? 400 : 300;
@@ -2050,7 +2063,6 @@
             let ptsActualesTema = studentData.stats[temaKey] || 0;
             let ptsActualesDiff = studentData.stats[diffKey] || 0;
             
-            // Calcular cuántos puntos realmente puede ganar sin pasarse de los límites
             let ptsDisponiblesTema = limiteTema - ptsActualesTema;
             let ptsDisponiblesDiff = limiteDiff - ptsActualesDiff;
             
@@ -2088,6 +2100,18 @@
             if (studentData.expediente === '') document.getElementById('loginModal').classList.remove('hidden');
             else { actualizarUIEstudiante(); initProblem(); }
         };
+
+        // EXPORTAMOS SOLO LAS FUNCIONES SEGURAS PARA QUE FUNCIONEN LOS BOTONES DE LA INTERFAZ
+        window.selectAvatar = selectAvatar;
+        window.handleAuthSubmit = handleAuthSubmit;
+        window.showLeaderboard = showLeaderboard;
+        window.cerrarSesion = cerrarSesion;
+        window.setDifficulty = setDifficulty;
+        window.setTopic = setTopic;
+        window.initProblem = initProblem;
+        window.verifyStep = verifyStep;
+        
+        })(); // FIN DE LA CÁPSULA DE SEGURIDAD IIFE
     </script>
 </body>
 </html>
