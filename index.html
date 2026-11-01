@@ -324,8 +324,8 @@
         let studentData = { expediente: '', nombre: '', apPaterno: '', apMaterno: '', grupo: '', avatar: '🧑‍🎓', puntos: 0, racha: 0, resueltos: 0, stats: {} };
         let currentState = { topic: 'col_mul', difficulty: 'facil', steps: [], stepIndex: 0, data: {} };
         
-        let problemFinished = false; // FLAG ANTI-SPAM
-        let liveSyncUnsubscribe = null; // LISTENER DEL ESCUDO EN TIEMPO REAL
+        let problemFinished = false; 
+        let liveSyncUnsubscribe = null; 
 
         // ==============================================================
         // LISTA DE ALUMNOS PRECARGADA
@@ -788,20 +788,19 @@
             document.getElementById('authBtn').innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; lucide.createIcons();
 
             let savedData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
+            
             if (!savedData) {
                 let localRaw = localStorage.getItem('math_student_' + exp);
                 if (localRaw) {
                     try {
                         let parsed = JSON.parse(localRaw);
-                        if (parsed.hash) {
-                            if (btoa(JSON.stringify(parsed.data) + "MathStep_2026_Secure") === parsed.hash) {
-                                savedData = parsed.data;
-                            } else {
-                                alert("⚠️ Se detectó una alteración en los datos. El progreso local ha sido rechazado.");
-                                savedData = null;
-                            }
+                        // MODO ESTRICTO: Solo aceptamos si tiene el hash de seguridad correcto
+                        if (parsed.hash && btoa(JSON.stringify(parsed.data) + "MathStep_2026_Secure") === parsed.hash) {
+                            savedData = parsed.data;
                         } else {
-                            savedData = parsed;
+                            // Si es de la versión vieja (sin hash), lo matamos. Empieza de 0.
+                            console.log("Datos antiguos detectados y descartados. Iniciando desde cero.");
+                            savedData = null;
                         }
                     } catch(e) { savedData = null; }
                 }
@@ -872,6 +871,7 @@
 
         document.getElementById('expedienteInput').addEventListener('input', function(e) {
             const val = e.target.value;
+            // Para la pantalla de inicio, intentamos ver si al menos existe el archivo
             const isLocalKnown = localStorage.getItem('math_student_' + val) !== null;
             
             if (val.length === 8) {
@@ -2141,7 +2141,6 @@
             }
         };
 
-        // EXPORTAMOS SOLO LAS FUNCIONES SEGURAS PARA QUE FUNCIONEN LOS BOTONES
         window.selectAvatar = selectAvatar;
         window.handleAuthSubmit = handleAuthSubmit;
         window.showLeaderboard = showLeaderboard;
@@ -2155,6 +2154,3 @@
     </script>
 </body>
 </html>
-```
-
-Con esto concluimos la programación integral de la aplicación. Te recomiendo hacer una copia de seguridad en tu computadora de este bloque para que siempre tengas el código fuente seguro. ¡Ha sido un gusto construir esta excelente herramienta educativa contigo, profesor!
