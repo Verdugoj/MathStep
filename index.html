@@ -18,9 +18,9 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyBXLeHfvxcVo-lvNpEHjf0vjfgjRJp4aYg",
@@ -69,10 +69,13 @@
                     return docSnap.exists() ? docSnap.data() : null;
                 } catch(e) { return null; }
             },
-            async getLeaderboard() {
+			async getLeaderboard(grupo) {
                 if (!window.isCloudReady || !db) return [];
                 try {
-                    const snap = await getDocs(collection(db, 'artifacts', appId, 'public', 'data', 'students'));
+                    // Solo descargamos a los alumnos que coincidan con el grupo exacto
+                    const studentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
+                    const q = query(studentsRef, where("grupo", "==", grupo));
+                    const snap = await getDocs(q);
                     let students = [];
                     snap.forEach(doc => { students.push(doc.data()); });
                     return students;
@@ -892,6 +895,9 @@
                 document.getElementById('authBtn').innerText = 'Ingresar a la Nube';
             }
         });
+			        // Variables para el escudo Anti-Spam (Cooldown)
+        let lastLeaderboardFetch = 0;
+        let cachedLeaderboardHtml = '';
 
         async function showLeaderboard() {
             if (!studentData.grupo) return alert("Inicia sesión primero para ver tu grupo.");
@@ -899,6 +905,14 @@
             document.getElementById('leaderboardModal').classList.remove('hidden');
             document.getElementById('lbGroupTitle').innerText = `Grupo ${studentData.grupo}`;
             const listEl = document.getElementById('leaderboardList');
+            
+            // ESCUDO ANTI-SPAM: Si pidieron el Top 5 hace menos de 60 segundos, mostramos la versión guardada sin gastar lecturas de Firebase.
+            const now = Date.now();
+            if (now - lastLeaderboardFetch < 60000 && cachedLeaderboardHtml) {
+                listEl.innerHTML = cachedLeaderboardHtml;
+                return;
+            }
+
             listEl.innerHTML = '<div class="text-center py-8"><i data-lucide="loader-2" class="w-8 h-8 animate-spin mx-auto text-orange-400 mb-2"></i><p class="text-slate-500 font-medium">Buscando los mejores puntajes...</p></div>';
             lucide.createIcons();
 
@@ -908,8 +922,10 @@
             }
 
             try {
-                let allStudents = await window.cloudDB.getLeaderboard();
-                let groupStudents = allStudents.filter(s => s.grupo === studentData.grupo);
+                // Ahora le enviamos el grupo a Firebase para que filtre desde la nube
+                let groupStudents = await window.cloudDB.getLeaderboard(studentData.grupo);
+                
+                // Ordenar de mayor a menor
                 groupStudents.sort((a, b) => (b.puntos || 0) - (a.puntos || 0));
                 
                 let top5 = groupStudents.slice(0, 5);
@@ -936,11 +952,16 @@
                         <div class="font-black text-lg text-orange-500 bg-orange-100 px-3 py-1 rounded-xl">${st.puntos || 0} pts</div>
                     </div>`;
                 });
+                
+                // Guardamos el resultado en la memoria temporal (Caché) y actualizamos el reloj
+                cachedLeaderboardHtml = html;
+                lastLeaderboardFetch = now;
                 listEl.innerHTML = html;
             } catch(e) {
                 listEl.innerHTML = '<div class="text-center text-rose-500 py-4 font-bold">Error al cargar la clasificación.</div>';
             }
         }
+			
 
         function cerrarSesion() {
             if (liveSyncUnsubscribe) liveSyncUnsubscribe();
