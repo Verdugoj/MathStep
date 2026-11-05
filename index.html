@@ -55,11 +55,11 @@
 
         window.cloudDB = {
             async saveProgress(expediente, data) {
-                if (!window.isCloudReady || !db) return;
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
-                    await setDoc(docRef, data, { merge: true });
-                } catch(e) { console.warn("Error guardando nube:", e); }
+                if (!window.isCloudReady || !db) throw new Error("No DB");
+                const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'students', expediente);
+                // Reloj de 4 segundos: Si Firebase se traba por cuotas, se detiene y avisa error sin congelar la app
+                const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout')), 4000));
+                await Promise.race([setDoc(docRef, data, { merge: true }), timeout]);
             },
             async loadProgress(expediente) {
                 if (!window.isCloudReady || !db) return null;
@@ -215,7 +215,7 @@
                 <h1 class="font-fredoka text-xl sm:text-2xl font-bold text-slate-800 tracking-tight hidden sm:block">MathStep</h1>
             </div>
             
-            <div class="flex items-center gap-2 sm:gap-3">
+            <div class="flex items-center gap-1.5 sm:gap-3">
                 <!-- BOTÓN DE GUARDADO INTELIGENTE -->
                 <button id="cloudSaveBtn" onclick="guardarEnNubeManual()" class="hidden flex items-center gap-1 sm:gap-2 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 cursor-pointer hover:bg-emerald-100 text-emerald-600 font-bold transition-all text-xs sm:text-sm">
                     ☁️ Al día
@@ -225,11 +225,12 @@
                     <span class="text-indigo-500"><i data-lucide="trophy" class="w-5 h-5"></i></span>
                     <span class="font-bold text-indigo-700 hidden sm:block">Top 5</span>
                 </div>
-                <div class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 hidden sm:flex">
-                    <span class="text-amber-500"><i data-lucide="medal" class="w-5 h-5"></i></span>
-                    <span class="font-bold text-amber-700" id="totalPoints">0 pts</span>
+                <!-- PUNTOS AHORA SIEMPRE VISIBLES EN CELULAR -->
+                <div class="flex items-center gap-1 sm:gap-2 bg-amber-50 px-2 sm:px-3 py-1.5 rounded-xl border border-amber-200 flex">
+                    <span class="text-amber-500"><i data-lucide="medal" class="w-4 h-4 sm:w-5 sm:h-5"></i></span>
+                    <span class="font-bold text-amber-700 text-xs sm:text-base whitespace-nowrap" id="totalPoints">0 pts</span>
                 </div>
-                <div class="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-200" onclick="cerrarSesion()">
+                <div class="flex items-center gap-1 sm:gap-2 bg-slate-100 px-2 sm:px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer hover:bg-slate-200" onclick="cerrarSesion()">
                     <span class="text-xl" id="userAvatarDisplay">🧑‍🎓</span>
                     <span class="hidden sm:block font-medium text-sm text-slate-700 truncate" id="userNameDisplay">...</span>
                 </div>
@@ -335,8 +336,8 @@
         let lastLeaderboardTime = 0;
         let cachedLeaderboardHTML = '';
 
-        // VARIABLE PARA GUARDADO INTELIGENTE
-        let ejerciciosSinGuardar = 0;
+        // VARIABLE PARA GUARDADO INTELIGENTE (AHORA CUENTA PUNTOS)
+        let puntosSinGuardar = 0;
 
         const alumnosListaMaestra = {
             "26240008":  { nombre: " DANIELA CAROLINA", apPaterno: "ALMANZA" , apMaterno:  "FLORES", grupo:  "101V" },
@@ -814,8 +815,8 @@
                 if (cloudData.puntos === 0 && localData.puntos > 0) {
                     studentData = cloudData; // Regla 1: Castigo del profesor a 0
                 } else if (localData.puntos > cloudData.puntos) {
-                    studentData = localData; // Regla 2: Rescata progreso local (jugó offline / sin límite)
-                    ejerciciosSinGuardar = 1; // Enciende el botón rojo para que guarde
+                    studentData = localData; // Regla 2: Rescata progreso local
+                    puntosSinGuardar = localData.puntos - cloudData.puntos; // Calculamos los puntos pendientes exactos
                 } else {
                     studentData = cloudData; // Regla 3: Nube está al día
                 }
@@ -826,7 +827,7 @@
             } else if (localData) {
                 studentData = localData;
                 studentData.avatar = selectedAvatar;
-                ejerciciosSinGuardar = 1;
+                puntosSinGuardar = localData.puntos;
             } else {
                 const preloaded = alumnosListaMaestra[exp];
                 if (preloaded) {
@@ -855,12 +856,11 @@
                 }
             }
             
-            // Forzar un primer guardado local para crear la sesión segura
             let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
             let securePaquete = { data: studentData, hash: btoa(secureStr) };
             localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
             
-            if (ejerciciosSinGuardar === 0) guardarEnNubeSilencioso();
+            if (puntosSinGuardar === 0) guardarEnNubeSilencioso();
             
             activarEscudoTiempoReal(studentData.expediente);
             
@@ -879,8 +879,6 @@
                 if (docSnap.exists()) {
                     let serverData = docSnap.data();
                     
-                    // ESCUDO INTELIGENTE EN VIVO
-                    // Regla 1: Castigo absoluto a 0 por el profesor
                     if (serverData.puntos === 0 && studentData.puntos > 0) {
                         studentData.puntos = 0;
                         studentData.racha = 0;
@@ -894,7 +892,6 @@
                         alert("🔒 Control Escolar: Tus puntuaciones han sido auditadas y ajustadas a 0 por el profesor.");
                         window.location.reload(); 
                     }
-                    // Regla 2: La nube tiene más puntos (Sincronizar hacia arriba si jugó en otro dispositivo)
                     else if (serverData.puntos > studentData.puntos) {
                         studentData.puntos = serverData.puntos;
                         studentData.racha = serverData.racha;
@@ -906,7 +903,6 @@
                         localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
                         actualizarUIEstudiante();
                     }
-                    // Regla 3: Si el celular tiene MÁS puntos (jugó offline), el escudo inteligente no borra nada.
                 }
             });
         }
@@ -1003,7 +999,6 @@
             document.getElementById('cloudSaveBtn').classList.add('hidden');
         }
 
-        // SISTEMA DE GUARDADO INTELIGENTE (AHORRO DE DATOS)
         function guardarProgresoLocal() {
             let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
             let securePaquete = {
@@ -1012,17 +1007,15 @@
             };
             localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
             
-            ejerciciosSinGuardar++;
             actualizarBotonGuardado();
 
-            // Auto-guardado de seguridad cada 10 problemas
-            if (ejerciciosSinGuardar >= 10) {
+            if (puntosSinGuardar >= 10) {
                 guardarEnNubeSilencioso();
             }
         }
 
         async function guardarEnNubeManual() {
-            if (ejerciciosSinGuardar === 0) {
+            if (puntosSinGuardar === 0) {
                 alert("¡Tus puntos ya están respaldados en la nube!");
                 return;
             }
@@ -1031,42 +1024,54 @@
             btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 sm:w-5 sm:h-5 animate-spin"></i> Guardando...';
             lucide.createIcons();
             
-            if (window.cloudDB) {
-                await window.cloudDB.saveProgress(studentData.expediente, studentData);
+            let success = false;
+            try {
+                if (window.cloudDB) {
+                    await window.cloudDB.saveProgress(studentData.expediente, studentData);
+                    success = true;
+                }
+            } catch(e) {
+                console.warn("Límite de Firebase detectado:", e);
             }
             
-            ejerciciosSinGuardar = 0;
-            actualizarBotonGuardado();
-            
-            btn.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i> ¡Guardado!';
-            lucide.createIcons();
-            
-            setTimeout(() => {
-                actualizarBotonGuardado();
-            }, 2000);
+            if (success) {
+                puntosSinGuardar = 0;
+                btn.className = "flex items-center gap-1 sm:gap-2 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 text-emerald-600 font-bold transition-all text-xs sm:text-sm";
+                btn.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i> ¡Guardado!';
+                lucide.createIcons();
+                setTimeout(() => { actualizarBotonGuardado(); }, 2000);
+            } else {
+                btn.className = "flex items-center gap-1 sm:gap-2 bg-rose-100 px-3 py-1.5 rounded-xl border border-rose-300 text-rose-700 font-bold transition-all text-xs sm:text-sm animate-pulse";
+                btn.innerHTML = '<i data-lucide="alert-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i> Error (Límite)';
+                lucide.createIcons();
+                setTimeout(() => { actualizarBotonGuardado(); }, 3000);
+            }
         }
 
-        function guardarEnNubeSilencioso() {
-            if (window.cloudDB) {
-                window.cloudDB.saveProgress(studentData.expediente, studentData);
+        async function guardarEnNubeSilencioso() {
+            try {
+                if (window.cloudDB) {
+                    await window.cloudDB.saveProgress(studentData.expediente, studentData);
+                    puntosSinGuardar = 0;
+                    actualizarBotonGuardado();
+                }
+            } catch(e) {
+                console.warn("Falla silenciosa al guardar (límite):", e);
             }
-            ejerciciosSinGuardar = 0;
-            actualizarBotonGuardado();
         }
 
         function actualizarBotonGuardado() {
             let btn = document.getElementById('cloudSaveBtn');
             if(!btn) return;
             
-            if(ejerciciosSinGuardar > 0) {
+            if(puntosSinGuardar > 0) {
                 btn.className = "flex items-center gap-1 sm:gap-2 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 cursor-pointer hover:bg-rose-100 animate-pulse text-rose-600 font-bold transition-all text-xs sm:text-sm";
-                btn.innerHTML = '☁️ Guardar (' + ejerciciosSinGuardar + ')';
+                btn.innerHTML = '☁️ Guardar (' + puntosSinGuardar + ' pts)';
             } else {
                 btn.className = "flex items-center gap-1 sm:gap-2 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 cursor-pointer hover:bg-emerald-100 text-emerald-600 font-bold transition-all text-xs sm:text-sm";
                 btn.innerHTML = '☁️ Al día';
             }
         }
-        // FIN DE GUARDADO INTELIGENTE
 
         function actualizarUIEstudiante() {
             document.getElementById('userNameDisplay').innerText = studentData.nombre || studentData.expediente;
@@ -2215,6 +2220,7 @@
             let rewardSpan = document.getElementById('rewardText');
             if (ptsGanados > 0) {
                 studentData.puntos += ptsGanados;
+                puntosSinGuardar += ptsGanados; // Incrementamos los puntos pendientes del alumno
                 studentData.stats[temaKey] = ptsActualesTema + ptsGanados;
                 studentData.stats[diffKey] = ptsActualesDiff + ptsGanados;
                 rewardSpan.innerText = ptsGanados;
@@ -2234,7 +2240,6 @@
             
             actualizarUIEstudiante();
             
-            // SE APLICA EL GUARDADO INTELIGENTE
             guardarProgresoLocal();
             
             confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, zIndex: 200 });
