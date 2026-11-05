@@ -784,33 +784,44 @@
             document.querySelectorAll('#avatarSelector div').forEach(d => d.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-slate-50 border-2 border-transparent hover:bg-slate-100');
             el.className = 'cursor-pointer text-2xl p-2 rounded-xl bg-indigo-100 border-2 border-indigo-500';
         }
-
-        async function handleAuthSubmit() {
+		
+		async function handleAuthSubmit() {
             const exp = document.getElementById('expedienteInput').value.trim();
             if (exp.length !== 8) { alert("El expediente debe tener 8 dígitos."); return; }
             document.getElementById('authBtn').innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; lucide.createIcons();
 
-            let savedData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
+            let cloudData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
+            let localData = null;
             
-            if (!savedData) {
-                let localRaw = localStorage.getItem('math_student_' + exp);
-                if (localRaw) {
-                    try {
-                        let parsed = JSON.parse(localRaw);
-                        let secureStr = encodeURIComponent(JSON.stringify(parsed.data) + "MathStep_2026_Secure");
-                        if (parsed.hash && btoa(secureStr) === parsed.hash) {
-                            savedData = parsed.data;
-                        } else {
-                            console.log("Datos antiguos detectados y descartados. Iniciando desde cero.");
-                            savedData = null;
-                        }
-                    } catch(e) { savedData = null; }
-                }
+            let localRaw = localStorage.getItem('math_student_' + exp);
+            if (localRaw) {
+                try {
+                    let parsed = JSON.parse(localRaw);
+                    let secureStr = encodeURIComponent(JSON.stringify(parsed.data) + "MathStep_2026_Secure");
+                    if (parsed.hash && btoa(secureStr) === parsed.hash) {
+                        localData = parsed.data;
+                    }
+                } catch(e) {}
             }
 
-            if (savedData) {
-                studentData = savedData;
-                studentData.avatar = selectedAvatar; 
+            // LÓGICA DE ESCUDO INTELIGENTE AL INICIAR SESIÓN
+            if (cloudData && localData) {
+                if (cloudData.puntos === 0 && localData.puntos > 0) {
+                    studentData = cloudData; // Regla 1: Castigo del profesor a 0
+                } else if (localData.puntos > cloudData.puntos) {
+                    studentData = localData; // Regla 2: Rescata progreso local (jugó offline / sin límite)
+                    ejerciciosSinGuardar = 1; // Enciende el botón rojo para que guarde
+                } else {
+                    studentData = cloudData; // Regla 3: Nube está al día
+                }
+                studentData.avatar = selectedAvatar;
+            } else if (cloudData) {
+                studentData = cloudData;
+                studentData.avatar = selectedAvatar;
+            } else if (localData) {
+                studentData = localData;
+                studentData.avatar = selectedAvatar;
+                ejerciciosSinGuardar = 1;
             } else {
                 const preloaded = alumnosListaMaestra[exp];
                 if (preloaded) {
@@ -838,12 +849,20 @@
                     };
                 }
             }
-            guardarProgreso();
+            
+            // Forzar un primer guardado local para crear la sesión segura
+            let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
+            let securePaquete = { data: studentData, hash: btoa(secureStr) };
+            localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
+            
+            if (ejerciciosSinGuardar === 0) guardarEnNubeSilencioso();
             
             activarEscudoTiempoReal(studentData.expediente);
             
             document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('cloudSaveBtn').classList.remove('hidden');
             actualizarUIEstudiante(); initProblem();
+            actualizarBotonGuardado();
         }
 
         function activarEscudoTiempoReal(expediente) {
@@ -855,21 +874,38 @@
                 if (docSnap.exists()) {
                     let serverData = docSnap.data();
                     
-                    if (serverData.puntos < studentData.puntos || serverData.racha < studentData.racha) {
+                    // ESCUDO INTELIGENTE EN VIVO
+                    // Regla 1: Castigo absoluto a 0 por el profesor
+                    if (serverData.puntos === 0 && studentData.puntos > 0) {
+                        studentData.puntos = 0;
+                        studentData.racha = 0;
+                        studentData.resueltos = 0;
+                        studentData.stats = serverData.stats;
                         
+                        let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
+                        let securePaquete = { data: studentData, hash: btoa(secureStr) };
+                        localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
+                        
+                        alert("🔒 Control Escolar: Tus puntuaciones han sido auditadas y ajustadas a 0 por el profesor.");
+                        window.location.reload(); 
+                    }
+                    // Regla 2: La nube tiene más puntos (Sincronizar hacia arriba si jugó en otro dispositivo)
+                    else if (serverData.puntos > studentData.puntos) {
                         studentData.puntos = serverData.puntos;
                         studentData.racha = serverData.racha;
                         studentData.resueltos = serverData.resueltos;
                         studentData.stats = serverData.stats;
                         
-                        guardarProgreso();
-                        
-                        alert("🔒 Control Escolar: Tus puntuaciones han sido auditadas y ajustadas por el profesor.");
-                        window.location.reload(); 
+                        let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
+                        let securePaquete = { data: studentData, hash: btoa(secureStr) };
+                        localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
+                        actualizarUIEstudiante();
                     }
+                    // Regla 3: Si el celular tiene MÁS puntos (jugó offline), el escudo inteligente no borra nada.
                 }
             });
         }
+
 
         document.getElementById('expedienteInput').addEventListener('input', function(e) {
             const val = e.target.value;
