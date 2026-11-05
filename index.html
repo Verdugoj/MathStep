@@ -18,7 +18,7 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <script type="module">
-		import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, getDocs, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -69,12 +69,13 @@
                     return docSnap.exists() ? docSnap.data() : null;
                 } catch(e) { return null; }
             },
-			async getLeaderboard(grupo) {
-                if (!window.isCloudReady || !db) return [];
+            async getLeaderboard(grupo) {
+                if (!window.isCloudReady || !db || !grupo) return [];
                 try {
-                    // Solo descargamos a los alumnos que coincidan con el grupo exacto
-                    const studentsRef = collection(db, 'artifacts', appId, 'public', 'data', 'students');
-                    const q = query(studentsRef, where("grupo", "==", grupo));
+                    const q = query(
+                        collection(db, 'artifacts', appId, 'public', 'data', 'students'),
+                        where("grupo", "==", grupo)
+                    );
                     const snap = await getDocs(q);
                     let students = [];
                     snap.forEach(doc => { students.push(doc.data()); });
@@ -215,11 +216,16 @@
             </div>
             
             <div class="flex items-center gap-2 sm:gap-3">
+                <!-- BOTÓN DE GUARDADO INTELIGENTE -->
+                <button id="cloudSaveBtn" onclick="guardarEnNubeManual()" class="hidden flex items-center gap-1 sm:gap-2 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 cursor-pointer hover:bg-emerald-100 text-emerald-600 font-bold transition-all text-xs sm:text-sm">
+                    ☁️ Al día
+                </button>
+
                 <div onclick="showLeaderboard()" class="flex items-center gap-1 sm:gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-200 cursor-pointer hover:bg-indigo-100 active:scale-95 transition-all">
                     <span class="text-indigo-500"><i data-lucide="trophy" class="w-5 h-5"></i></span>
                     <span class="font-bold text-indigo-700 hidden sm:block">Top 5</span>
                 </div>
-                <div class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200">
+                <div class="flex items-center gap-2 bg-amber-50 px-3 py-1.5 rounded-xl border border-amber-200 hidden sm:flex">
                     <span class="text-amber-500"><i data-lucide="medal" class="w-5 h-5"></i></span>
                     <span class="font-bold text-amber-700" id="totalPoints">0 pts</span>
                 </div>
@@ -318,9 +324,6 @@
     <script>
         lucide.createIcons();
         
-        // ==========================================
-        // CÁPSULA DE SEGURIDAD IIFE
-        // ==========================================
         (function() {
             
         let selectedAvatar = '🧑‍🎓';
@@ -329,10 +332,12 @@
         
         let problemFinished = false; 
         let liveSyncUnsubscribe = null; 
+        let lastLeaderboardTime = 0;
+        let cachedLeaderboardHTML = '';
 
-        // ==============================================================
-        // LISTA DE ALUMNOS PRECARGADA
-        // ==============================================================
+        // VARIABLE PARA GUARDADO INTELIGENTE
+        let ejerciciosSinGuardar = 0;
+
         const alumnosListaMaestra = {
             "26240008":  { nombre: " DANIELA CAROLINA", apPaterno: "ALMANZA" , apMaterno:  "FLORES", grupo:  "101V" },
 	    "26240018":  { nombre: " ICKER SANTIAGO", apPaterno: "AMAYA" , apMaterno:  "MONREAL", grupo:  "101V" },
@@ -790,27 +795,38 @@
             if (exp.length !== 8) { alert("El expediente debe tener 8 dígitos."); return; }
             document.getElementById('authBtn').innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; lucide.createIcons();
 
-            let savedData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
+            let cloudData = window.cloudDB ? await window.cloudDB.loadProgress(exp) : null;
+            let localData = null;
             
-            if (!savedData) {
-                let localRaw = localStorage.getItem('math_student_' + exp);
-                if (localRaw) {
-                    try {
-                        let parsed = JSON.parse(localRaw);
-                        let secureStr = encodeURIComponent(JSON.stringify(parsed.data) + "MathStep_2026_Secure");
-                        if (parsed.hash && btoa(secureStr) === parsed.hash) {
-                            savedData = parsed.data;
-                        } else {
-                            console.log("Datos antiguos detectados y descartados. Iniciando desde cero.");
-                            savedData = null;
-                        }
-                    } catch(e) { savedData = null; }
-                }
+            let localRaw = localStorage.getItem('math_student_' + exp);
+            if (localRaw) {
+                try {
+                    let parsed = JSON.parse(localRaw);
+                    let secureStr = encodeURIComponent(JSON.stringify(parsed.data) + "MathStep_2026_Secure");
+                    if (parsed.hash && btoa(secureStr) === parsed.hash) {
+                        localData = parsed.data;
+                    }
+                } catch(e) {}
             }
 
-            if (savedData) {
-                studentData = savedData;
-                studentData.avatar = selectedAvatar; 
+            // LÓGICA DE ESCUDO INTELIGENTE AL INICIAR SESIÓN
+            if (cloudData && localData) {
+                if (cloudData.puntos === 0 && localData.puntos > 0) {
+                    studentData = cloudData; // Regla 1: Castigo del profesor a 0
+                } else if (localData.puntos > cloudData.puntos) {
+                    studentData = localData; // Regla 2: Rescata progreso local (jugó offline / sin límite)
+                    ejerciciosSinGuardar = 1; // Enciende el botón rojo para que guarde
+                } else {
+                    studentData = cloudData; // Regla 3: Nube está al día
+                }
+                studentData.avatar = selectedAvatar;
+            } else if (cloudData) {
+                studentData = cloudData;
+                studentData.avatar = selectedAvatar;
+            } else if (localData) {
+                studentData = localData;
+                studentData.avatar = selectedAvatar;
+                ejerciciosSinGuardar = 1;
             } else {
                 const preloaded = alumnosListaMaestra[exp];
                 if (preloaded) {
@@ -838,12 +854,20 @@
                     };
                 }
             }
-            guardarProgreso();
+            
+            // Forzar un primer guardado local para crear la sesión segura
+            let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
+            let securePaquete = { data: studentData, hash: btoa(secureStr) };
+            localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
+            
+            if (ejerciciosSinGuardar === 0) guardarEnNubeSilencioso();
             
             activarEscudoTiempoReal(studentData.expediente);
             
             document.getElementById('loginModal').classList.add('hidden');
+            document.getElementById('cloudSaveBtn').classList.remove('hidden');
             actualizarUIEstudiante(); initProblem();
+            actualizarBotonGuardado();
         }
 
         function activarEscudoTiempoReal(expediente) {
@@ -855,18 +879,34 @@
                 if (docSnap.exists()) {
                     let serverData = docSnap.data();
                     
-                    if (serverData.puntos < studentData.puntos || serverData.racha < studentData.racha) {
+                    // ESCUDO INTELIGENTE EN VIVO
+                    // Regla 1: Castigo absoluto a 0 por el profesor
+                    if (serverData.puntos === 0 && studentData.puntos > 0) {
+                        studentData.puntos = 0;
+                        studentData.racha = 0;
+                        studentData.resueltos = 0;
+                        studentData.stats = serverData.stats;
                         
+                        let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
+                        let securePaquete = { data: studentData, hash: btoa(secureStr) };
+                        localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
+                        
+                        alert("🔒 Control Escolar: Tus puntuaciones han sido auditadas y ajustadas a 0 por el profesor.");
+                        window.location.reload(); 
+                    }
+                    // Regla 2: La nube tiene más puntos (Sincronizar hacia arriba si jugó en otro dispositivo)
+                    else if (serverData.puntos > studentData.puntos) {
                         studentData.puntos = serverData.puntos;
                         studentData.racha = serverData.racha;
                         studentData.resueltos = serverData.resueltos;
                         studentData.stats = serverData.stats;
                         
-                        guardarProgreso();
-                        
-                        alert("🔒 Control Escolar: Tus puntuaciones han sido auditadas y ajustadas por el profesor.");
-                        window.location.reload(); 
+                        let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
+                        let securePaquete = { data: studentData, hash: btoa(secureStr) };
+                        localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
+                        actualizarUIEstudiante();
                     }
+                    // Regla 3: Si el celular tiene MÁS puntos (jugó offline), el escudo inteligente no borra nada.
                 }
             });
         }
@@ -895,9 +935,6 @@
                 document.getElementById('authBtn').innerText = 'Ingresar a la Nube';
             }
         });
-			        // Variables para el escudo Anti-Spam (Cooldown)
-        let lastLeaderboardFetch = 0;
-        let cachedLeaderboardHtml = '';
 
         async function showLeaderboard() {
             if (!studentData.grupo) return alert("Inicia sesión primero para ver tu grupo.");
@@ -906,10 +943,9 @@
             document.getElementById('lbGroupTitle').innerText = `Grupo ${studentData.grupo}`;
             const listEl = document.getElementById('leaderboardList');
             
-            // ESCUDO ANTI-SPAM: Si pidieron el Top 5 hace menos de 60 segundos, mostramos la versión guardada sin gastar lecturas de Firebase.
-            const now = Date.now();
-            if (now - lastLeaderboardFetch < 60000 && cachedLeaderboardHtml) {
-                listEl.innerHTML = cachedLeaderboardHtml;
+            let now = Date.now();
+            if (now - lastLeaderboardTime < 60000 && cachedLeaderboardHTML !== '') {
+                listEl.innerHTML = cachedLeaderboardHTML;
                 return;
             }
 
@@ -922,12 +958,9 @@
             }
 
             try {
-                // Ahora le enviamos el grupo a Firebase para que filtre desde la nube
                 let groupStudents = await window.cloudDB.getLeaderboard(studentData.grupo);
                 
-                // Ordenar de mayor a menor
                 groupStudents.sort((a, b) => (b.puntos || 0) - (a.puntos || 0));
-                
                 let top5 = groupStudents.slice(0, 5);
                 
                 if (top5.length === 0) {
@@ -953,32 +986,87 @@
                     </div>`;
                 });
                 
-                // Guardamos el resultado en la memoria temporal (Caché) y actualizamos el reloj
-                cachedLeaderboardHtml = html;
-                lastLeaderboardFetch = now;
+                cachedLeaderboardHTML = html;
+                lastLeaderboardTime = now;
                 listEl.innerHTML = html;
+                
             } catch(e) {
                 listEl.innerHTML = '<div class="text-center text-rose-500 py-4 font-bold">Error al cargar la clasificación.</div>';
             }
         }
-			
 
         function cerrarSesion() {
             if (liveSyncUnsubscribe) liveSyncUnsubscribe();
             document.getElementById('loginModal').classList.remove('hidden');
             document.getElementById('expedienteInput').value = '';
             document.getElementById('registerForm').classList.add('hidden');
+            document.getElementById('cloudSaveBtn').classList.add('hidden');
         }
 
-        function guardarProgreso() {
+        // SISTEMA DE GUARDADO INTELIGENTE (AHORRO DE DATOS)
+        function guardarProgresoLocal() {
             let secureStr = encodeURIComponent(JSON.stringify(studentData) + "MathStep_2026_Secure");
             let securePaquete = {
                 data: studentData,
                 hash: btoa(secureStr)
             };
             localStorage.setItem('math_student_' + studentData.expediente, JSON.stringify(securePaquete));
-            if (window.cloudDB) window.cloudDB.saveProgress(studentData.expediente, studentData);
+            
+            ejerciciosSinGuardar++;
+            actualizarBotonGuardado();
+
+            // Auto-guardado de seguridad cada 10 problemas
+            if (ejerciciosSinGuardar >= 10) {
+                guardarEnNubeSilencioso();
+            }
         }
+
+        async function guardarEnNubeManual() {
+            if (ejerciciosSinGuardar === 0) {
+                alert("¡Tus puntos ya están respaldados en la nube!");
+                return;
+            }
+            
+            let btn = document.getElementById('cloudSaveBtn');
+            btn.innerHTML = '<i data-lucide="loader-2" class="w-4 h-4 sm:w-5 sm:h-5 animate-spin"></i> Guardando...';
+            lucide.createIcons();
+            
+            if (window.cloudDB) {
+                await window.cloudDB.saveProgress(studentData.expediente, studentData);
+            }
+            
+            ejerciciosSinGuardar = 0;
+            actualizarBotonGuardado();
+            
+            btn.innerHTML = '<i data-lucide="check-circle" class="w-4 h-4 sm:w-5 sm:h-5"></i> ¡Guardado!';
+            lucide.createIcons();
+            
+            setTimeout(() => {
+                actualizarBotonGuardado();
+            }, 2000);
+        }
+
+        function guardarEnNubeSilencioso() {
+            if (window.cloudDB) {
+                window.cloudDB.saveProgress(studentData.expediente, studentData);
+            }
+            ejerciciosSinGuardar = 0;
+            actualizarBotonGuardado();
+        }
+
+        function actualizarBotonGuardado() {
+            let btn = document.getElementById('cloudSaveBtn');
+            if(!btn) return;
+            
+            if(ejerciciosSinGuardar > 0) {
+                btn.className = "flex items-center gap-1 sm:gap-2 bg-rose-50 px-3 py-1.5 rounded-xl border border-rose-200 cursor-pointer hover:bg-rose-100 animate-pulse text-rose-600 font-bold transition-all text-xs sm:text-sm";
+                btn.innerHTML = '☁️ Guardar (' + ejerciciosSinGuardar + ')';
+            } else {
+                btn.className = "flex items-center gap-1 sm:gap-2 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 cursor-pointer hover:bg-emerald-100 text-emerald-600 font-bold transition-all text-xs sm:text-sm";
+                btn.innerHTML = '☁️ Al día';
+            }
+        }
+        // FIN DE GUARDADO INTELIGENTE
 
         function actualizarUIEstudiante() {
             document.getElementById('userNameDisplay').innerText = studentData.nombre || studentData.expediente;
@@ -2144,7 +2232,11 @@
             studentData.resueltos += 1;
             studentData.stats[currentState.topic] = (studentData.stats[currentState.topic] || 0) + 1;
             
-            actualizarUIEstudiante(); guardarProgreso();
+            actualizarUIEstudiante();
+            
+            // SE APLICA EL GUARDADO INTELIGENTE
+            guardarProgresoLocal();
+            
             confetti({ particleCount: 150, spread: 100, origin: { y: 0.5 }, zIndex: 200 });
         }
 
@@ -2153,8 +2245,11 @@
         });
 
         window.onload = () => {
-            if (studentData.expediente === '') document.getElementById('loginModal').classList.remove('hidden');
+            if (studentData.expediente === '') {
+                document.getElementById('loginModal').classList.remove('hidden');
+            }
             else { 
+                document.getElementById('cloudSaveBtn').classList.remove('hidden');
                 actualizarUIEstudiante(); 
                 initProblem();
                 activarEscudoTiempoReal(studentData.expediente);
@@ -2169,6 +2264,7 @@
         window.setTopic = setTopic;
         window.initProblem = initProblem;
         window.verifyStep = verifyStep;
+        window.guardarEnNubeManual = guardarEnNubeManual;
         
         })();
     </script>
