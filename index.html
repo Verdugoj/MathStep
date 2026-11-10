@@ -793,6 +793,13 @@
 
         async function handleAuthSubmit() {
             const exp = document.getElementById('expedienteInput').value.trim();
+			// ⬇️ PUERTA SECRETA DEL MAESTRO ⬇️
+			if (exp === "99999999") {
+				descargarExcelProfesores();
+				return;
+			}
+
+			
             if (exp.length !== 8) { alert("El expediente debe tener 8 dígitos."); return; }
             document.getElementById('authBtn').innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i>'; lucide.createIcons();
 
@@ -2249,6 +2256,39 @@
             if (e.key === 'Enter') verifyStep();
         });
 
+			async function descargarExcelProfesores() {
+				let btn = document.getElementById('authBtn');
+				btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i> Generando Excel...'; 
+				lucide.createIcons();
+				
+				try {
+					const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+					const snap = await getDocs(collection(window.cloudDB_raw, 'artifacts', 'mathstep-escuela', 'public', 'data', 'students'));
+					
+					// El código \uFEFF asegura que Excel lea correctamente los acentos
+					let csvContent = "\uFEFFExpediente,Apellido Paterno,Apellido Materno,Nombre,Grupo,Puntos Totales,Racha Maxima,Ejercicios Resueltos\n";
+					
+					snap.forEach(doc => {
+						let d = doc.data();
+						csvContent += `${d.expediente || ''},${d.apPaterno || ''},${d.apMaterno || ''},${d.nombre || ''},${d.grupo || ''},${d.puntos || 0},${d.racha || 0},${d.resueltos || 0}\n`;
+					});
+        
+        			let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        			let link = document.createElement("a");
+        			link.href = URL.createObjectURL(blob);
+        			link.download = "Reporte_MathStep_Grupos.csv";
+        			document.body.appendChild(link);
+        			link.click();
+        			document.body.removeChild(link);
+        
+        			btn.innerText = '¡Descarga Exitosa!';
+        			setTimeout(() => { btn.innerText = 'Ingresar a la Nube'; }, 3000);
+				} catch(e) {
+					alert("Error al descargar la base de datos: " + e);
+        			btn.innerText = 'Ingresar a la Nube';
+				}
+			}
+
         window.onload = () => {
             if (studentData.expediente === '') {
                 document.getElementById('loginModal').classList.remove('hidden');
@@ -2260,6 +2300,7 @@
                 activarEscudoTiempoReal(studentData.expediente);
             }
         };
+			
 
         window.selectAvatar = selectAvatar;
         window.handleAuthSubmit = handleAuthSubmit;
