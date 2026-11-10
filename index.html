@@ -2258,35 +2258,62 @@
 
 			async function descargarExcelProfesores() {
 				let btn = document.getElementById('authBtn');
-				btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i> Generando Excel...'; 
-				lucide.createIcons();
-				
-				try {
+    			btn.innerHTML = '<i data-lucide="loader-2" class="w-5 h-5 animate-spin mx-auto"></i> Generando Excel...'; 
+    			lucide.createIcons();
+
+    			try {
 					const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-					const snap = await getDocs(collection(window.cloudDB_raw, 'artifacts', 'mathstep-escuela', 'public', 'data', 'students'));
-					
-					// El código \uFEFF asegura que Excel lea correctamente los acentos
-					let csvContent = "\uFEFFExpediente,Apellido Paterno,Apellido Materno,Nombre,Grupo,Puntos Totales,Racha Maxima,Ejercicios Resueltos\n";
-					
-					snap.forEach(doc => {
-						let d = doc.data();
-						csvContent += `${d.expediente || ''},${d.apPaterno || ''},${d.apMaterno || ''},${d.nombre || ''},${d.grupo || ''},${d.puntos || 0},${d.racha || 0},${d.resueltos || 0}\n`;
-					});
+        			const snap = await getDocs(collection(window.cloudDB_raw, 'artifacts', 'mathstep-escuela', 'public', 'data', 'students'));
+        
+        			let studentsData = [];
+        			let allStatsKeys = new Set();
+
+        			// Paso 1: Recolectar todos los datos y descubrir todas las columnas de stats posibles
+        			snap.forEach(doc => {
+            			let d = doc.data();
+            			studentsData.push(d);
+            			if (d.stats) {
+                			Object.keys(d.stats).forEach(key => allStatsKeys.add(key));
+            			}
+        			});
+
+        			// Ordenamos las columnas alfabéticamente para que quede ordenado en Excel
+        			let statsHeaders = Array.from(allStatsKeys).sort();
+        
+        			// Paso 2: Armar las cabeceras del CSV (\uFEFF protege los acentos en Excel)
+        			let csvContent = "\uFEFFExpediente,Apellido Paterno,Apellido Materno,Nombre,Grupo,Puntos Totales,Racha Maxima,Ejercicios Resueltos";
+        			statsHeaders.forEach(header => {
+            		csvContent += `,Stat: ${header}`;
+        			});
+        			csvContent += "\n";
+        
+        			// Paso 3: Llenar las filas de cada alumno
+        			studentsData.forEach(d => {
+	            		csvContent += `${d.expediente || ''},${d.apPaterno || ''},${d.apMaterno || ''},${d.nombre || ''},${d.grupo || ''},${d.puntos || 0},${d.racha || 0},${d.resueltos || 0}`;
+            
+    			        // Llenar sus stats. Si no ha jugado ese tema, le ponemos 0.
+            			statsHeaders.forEach(header => {
+                			let val = (d.stats && d.stats[header]) ? d.stats[header] : 0;
+                			csvContent += `,${val}`;
+            			});
+            			csvContent += "\n";
+        			});
         
         			let blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
         			let link = document.createElement("a");
         			link.href = URL.createObjectURL(blob);
-        			link.download = "Reporte_MathStep_Grupos.csv";
+       				 // Le cambiamos el nombre al archivo para indicar que incluye la auditoría
+        			link.download = "Reporte_MathStep_Auditoria.csv";
         			document.body.appendChild(link);
         			link.click();
         			document.body.removeChild(link);
         
         			btn.innerText = '¡Descarga Exitosa!';
         			setTimeout(() => { btn.innerText = 'Ingresar a la Nube'; }, 3000);
-				} catch(e) {
-					alert("Error al descargar la base de datos: " + e);
+    			} catch(e) {
+        			alert("Error al descargar la base de datos: " + e);
         			btn.innerText = 'Ingresar a la Nube';
-				}
+    			}
 			}
 
         window.onload = () => {
